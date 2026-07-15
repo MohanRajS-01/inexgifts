@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import Home from './views/Home';
-import Gifts from './views/Gifts';
-import Categories from './views/Categories';
-import ProductDetail from './views/ProductDetail';
-import Cart from './views/Cart';
-import Orders from './views/Orders';
-import Profile from './views/Profile';
-import Wishlist from './views/Wishlist';
-import Customize from './views/Customize';
+import Home from './pages/Home';
+import Gifts from './pages/Gifts';
+import Categories from './pages/Categories';
+import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
+import Orders from './pages/MyOrders';
+import Profile from './pages/Profile';
+import Wishlist from './pages/Wishlist';
+import Customize from './pages/Customize';
 
 export default function App() {
   const [view, setView] = useState('home');
