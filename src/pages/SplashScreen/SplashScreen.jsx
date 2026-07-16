@@ -614,7 +614,7 @@ export default function SplashScreen({ onComplete }) {
   return (
     /* Outer frame */
     <div className="flex justify-center items-center w-full h-full relative z-10">
-      <div className="relative w-screen h-[100dvh] bg-black overflow-hidden z-10">
+      <div className="relative w-full h-[100dvh] bg-black overflow-hidden z-10">
 
         {/* Splash viewport */}
         <div
