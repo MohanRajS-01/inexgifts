@@ -1,6 +1,8 @@
 import { FiChevronRight, FiHeart, FiShoppingCart, FiUploadCloud, FiType, FiCalendar, FiEye, FiCheckCircle, FiShield, FiTruck, FiSmile, FiHeadphones, FiAward, FiSearch } from 'react-icons/fi';
 import { FaWhatsapp, FaHeart, FaThLarge } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
+import HomeScreen2 from "./HomeScreen2";
+
 const categories = [
   { name: 'Gift Boxes', image: '/Gift.jpg', bgColor: 'bg-purple-100' },
   { name: 'Photo Frames', image: '/Frames.jpg', bgColor: 'bg-orange-100' },
@@ -116,7 +118,8 @@ const Home = ({ onAddToCart, onAddToWishlist }) => {
   }, []);
 
   return (
-    <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
+    <>
+      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
       {showToast && (
         <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full shadow-2xl z-[100] flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
           <FiCheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -375,7 +378,9 @@ const Home = ({ onAddToCart, onAddToWishlist }) => {
         </button>
       </div>
 
-    </main>
+      </main>
+      <HomeScreen2 onAddToCart={onAddToCart} onAddToWishlist={onAddToWishlist} hideHeader={true} hideMobileNav={true} hideWhatsApp={true} />
+    </>
   );
 };
 
