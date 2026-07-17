@@ -1,9 +1,9 @@
-.main-content {
+.product-detail-one-main {
   padding: 0 20px 20px;
 }
 
 @media (min-width: 1024px) {
-  .main-content {
+  .product-detail-one-main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 40px;

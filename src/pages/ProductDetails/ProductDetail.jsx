@@ -323,10 +323,10 @@ function BottomBar({ product, qty, setQty, onAddToCart }) {
   );
 }
 
-function ProductDetail({ product, showToast, qty, setQty, onAddToCart }) {
+function ProductDetail({ product, showToast, qty, setQty, onAddToCart, hideBottomBar }) {
   return (
     <>
-      <main className="main-content">
+      <main className="product-detail-one-main">
         <ProductVisuals product={product} showToast={showToast} />
         <div className="product-details-container">
           <ProductInfo product={product} />
@@ -334,7 +334,7 @@ function ProductDetail({ product, showToast, qty, setQty, onAddToCart }) {
           <CustomizationSection showToast={showToast} />
         </div>
       </main>
-      <BottomBar product={product} qty={qty} setQty={setQty} onAddToCart={onAddToCart} />
+      {!hideBottomBar && <BottomBar product={product} qty={qty} setQty={setQty} onAddToCart={onAddToCart} />}
     </>
   );
 }

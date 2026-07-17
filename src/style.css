@@ -163,7 +163,8 @@ body {
 /* Tab Navigation */
 .tab-nav {
   display: flex;
-  position: relative;
+  position: sticky;
+  top: 69px;
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   z-index: 9;
@@ -1301,6 +1302,7 @@ body {
   .tab-nav {
     padding: 0 80px;
     gap: 8px;
+    top: 80px;
   }
 
   .tab-item {

@@ -5,7 +5,7 @@ import MobileBottomNav from "./components/MobileBottom";
 import SplashScreen from "./pages/SplashScreen/SplashScreen";
 import Login from "./pages/Login/Login";
 import Search from "./pages/Search/Search";
-import ProductDetail from "./pages/ProductDetails/ProductDetail";
+import ProductDetails2 from "./pages/ProductDetails/ProductDetails2";
 import Categories from "./pages/Categories/Categories";
 import MyCart from "./pages/Cart/MyCart";
 import Wishlist from "./pages/Wishlist/Wishlist";
@@ -19,8 +19,9 @@ function App() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [qty, setQty] = useState(1);
+  const [previousView, setPreviousView] = useState('home1');
 
-  const handleAddToCart = () => setCartCount(prev => prev + 1);
+  const handleAddToCart = (count = 1) => setCartCount(prev => prev + count);
   const handleAddToWishlist = (isAdded) => {
     if (isAdded) {
       setWishlistCount(prev => prev + 1);
@@ -35,9 +36,10 @@ function App() {
   };
 
   const openProduct = (product) => {
+    setPreviousView(view);
     setSelectedProduct(product || null);
     setQty(1);
-    setView('product');
+    setView('product2');
   };
 
   const renderView = () => {
@@ -59,9 +61,19 @@ function App() {
             onOpenProduct={openProduct}
           />
         );
-      case 'product':
+      case 'product2':
         return selectedProduct ? (
-          <ProductDetail product={selectedProduct} showToast={() => {}} qty={qty} setQty={setQty} onAddToCart={() => { handleAddToCart(); setView('cart'); }} />
+          <ProductDetails2
+            product={selectedProduct}
+            showToast={() => {}}
+            qty={qty}
+            setQty={setQty}
+            onAddToCart={(count = 1) => { handleAddToCart(count); setView('cart'); }}
+            onToggleWishlist={handleAddToWishlist}
+            onBack={() => setView(previousView || 'home1')}
+            onOpenCart={() => setView('cart')}
+            cartCount={cartCount}
+          />
         ) : null;
       case 'categories':
         return <Categories />;
