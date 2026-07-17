@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-const giftsShowcase = new URL('C:/Users/Avinesh/inexgifts/src/assets/gifts_showcase.png', import.meta.url).href;
+import giftsShowcase from "../../assets/gifts_showcase.png";
 
 const features = [
   {

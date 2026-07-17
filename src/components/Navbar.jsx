@@ -1,7 +1,7 @@
 import { FiSearch, FiHeart, FiBell, FiShoppingCart, FiMenu, FiX } from 'react-icons/fi';
 import { useState } from 'react';
 
-const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
+const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch, setView }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
 
@@ -18,7 +18,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
         <div className="flex justify-between h-16 md:h-20 items-center">
           
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => setView && setView('home1')}>
             <span className="text-xl font-bold text-primary tracking-tight">
               INEX<span className="text-pink-500 text-xs align-top italic ml-1">Gifts</span>
             </span>
@@ -42,7 +42,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
 
           {/* Right side icons */}
           <div className="hidden md:flex items-center space-x-6">
-            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative" onClick={() => setView && setView('wishlist')}>
               <div className="relative">
                 <FiHeart className="h-6 w-6" />
                 {wishlistCount > 0 && (
@@ -58,7 +58,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
               </div>
               <span className="text-[10px] mt-1 font-medium">Notifications</span>
             </button>
-            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative" onClick={() => setView && setView('cart')}>
               <div className="relative">
                 <FiShoppingCart className="h-6 w-6" />
                 {cartCount > 0 && (
@@ -67,7 +67,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
               </div>
               <span className="text-[10px] mt-1 font-medium">Cart</span>
             </button>
-            <div className="flex items-center ml-4 cursor-pointer hover:opacity-80">
+            <div className="flex items-center ml-4 cursor-pointer hover:opacity-80" onClick={() => setView && setView('profile')}>
               <div className="h-9 w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300 flex items-center justify-center text-gray-500">
                 U
                </div>
@@ -80,7 +80,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
 
           {/* Mobile icons & menu button */}
           <div className="flex items-center md:hidden space-x-4">
-            <button className="text-[#3b3559] hover:text-primary transition-colors relative">
+            <button className="text-[#3b3559] hover:text-primary transition-colors relative" onClick={() => setView && setView('wishlist')}>
               <FiHeart className="h-[22px] w-[22px] stroke-[2]" />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 flex h-[15px] w-[15px] items-center justify-center rounded-full bg-[#de4b83] text-[9px] font-bold text-white">{wishlistCount}</span>
@@ -90,7 +90,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
               <FiBell className="h-[22px] w-[22px] stroke-[2]" />
               <span className="absolute top-0 right-0.5 h-1.5 w-1.5 rounded-full bg-[#de4b83]"></span>
             </button>
-            <button className="text-[#3b3559] hover:text-primary transition-colors relative">
+            <button className="text-[#3b3559] hover:text-primary transition-colors relative" onClick={() => setView && setView('cart')}>
               <FiShoppingCart className="h-[22px] w-[22px] stroke-[2]" />
               {cartCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 flex h-[15px].5 w-[15px] items-center justify-center rounded-full bg-[#de4b83] text-[9px] font-bold text-white">{cartCount}</span>
@@ -122,10 +122,10 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch }) => {
                 placeholder="Search..."
               />
             </form>
-            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50">Home</a>
-            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50">Categories</a>
-            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50">Orders</a>
-            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50">Profile</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50" onClick={(e) => { e.preventDefault(); setView && setView('home1'); }}>Home</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50" onClick={(e) => { e.preventDefault(); setView && setView('categories'); }}>Categories</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50" onClick={(e) => { e.preventDefault(); setView && setView('orders'); }}>Orders</a>
+            <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50" onClick={(e) => { e.preventDefault(); setView && setView('profile'); }}>Profile</a>
           </div>
         </div>
       )}

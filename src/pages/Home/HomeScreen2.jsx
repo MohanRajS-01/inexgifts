@@ -160,7 +160,8 @@ export default function HomeScreen2({
   hideMobileNav = false,
   hideWhatsApp = false,
   cartCount: parentCartCount,
-  wishlistCount: parentWishlistCount
+  wishlistCount: parentWishlistCount,
+  onOpenProduct
 }) {
   const [localCartCount, setLocalCartCount] = useState(2);
   const [localWishlistCount, setLocalWishlistCount] = useState(0);
@@ -199,13 +200,15 @@ export default function HomeScreen2({
     setTimeout(() => setToast({ show: false, message: "" }), 3000);
   };
 
-  const handleAddToCart = (productName) => {
+  const handleAddToCart = (e, productName) => {
+    e.stopPropagation();
     setLocalCartCount((prev) => prev + 1);
     if (onAddToCart) onAddToCart();
     triggerToast(`Added "${productName}" to Cart!`);
   };
 
-  const toggleWishlist = (productId, productName) => {
+  const toggleWishlist = (e, productId, productName) => {
+    e.stopPropagation();
     const isAdded = !wishlistItems[productId];
     setWishlistItems((prev) => ({ ...prev, [productId]: isAdded }));
     setLocalWishlistCount((prev) => (isAdded ? prev + 1 : Math.max(0, prev - 1)));
@@ -531,7 +534,8 @@ export default function HomeScreen2({
             return (
               <div
                 key={product.id}
-                className="group bg-white rounded-2xl border border-slate-100 shadow-premium p-3 flex flex-col transition-all duration-300 hover:shadow-xl hover:border-slate-200 relative"
+                onClick={() => onOpenProduct && onOpenProduct(product)}
+                className="group bg-white rounded-2xl border border-slate-100 shadow-premium p-3 flex flex-col transition-all duration-300 hover:shadow-xl hover:border-slate-200 relative cursor-pointer"
               >
                 {/* Badge & Wishlist Button */}
                 <div className="absolute top-4 left-4 z-10">
@@ -540,7 +544,7 @@ export default function HomeScreen2({
                   </span>
                 </div>
                 <button
-                  onClick={() => toggleWishlist(product.id, product.title)}
+                  onClick={(e) => toggleWishlist(e, product.id, product.title)}
                   className="absolute top-4 right-4 z-10 h-8 w-8 bg-white/90 backdrop-blur-md rounded-full shadow-md flex items-center justify-center text-slate-400 hover:text-pink-600 hover:scale-105 transition-all"
                 >
                   {isWishlisted ? (
@@ -592,7 +596,7 @@ export default function HomeScreen2({
                       </span>
                     </div>
                     <button
-                      onClick={() => handleAddToCart(product.title)}
+                      onClick={(e) => handleAddToCart(e, product.title)}
                       className="h-8.5 w-8.5 bg-violet-600 text-white rounded-full hover:bg-pink-600 flex items-center justify-center transition-colors shadow-glow hover:shadow-glow-pink"
                     >
                       <FiShoppingBag className="h-4 w-4" />

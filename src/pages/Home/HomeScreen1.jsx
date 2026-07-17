@@ -89,7 +89,7 @@ const bannerImages = [
   '/Banner4.png'
 ];
 
-const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
+const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
@@ -104,6 +104,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
 
   const handleAddToCartClick = (e, product) => {
     e.preventDefault();
+    e.stopPropagation();
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
     if (onAddToCart) onAddToCart(product);
@@ -111,6 +112,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
 
   const handleWishlistClick = (e, productId) => {
     e.preventDefault();
+    e.stopPropagation();
     const isCurrentlyAdded = !!wishlistItems[productId];
     const isAddedNow = !isCurrentlyAdded;
     
@@ -265,7 +267,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
   
           <div className="flex-1 flex overflow-x-auto gap-3 sm:gap-6 pb-2 hide-scrollbar snap-x items-stretch">
             {trendingProducts.map((product) => (
-              <div key={product.id} className="h-full w-[calc(50%-6px)] sm:w-[220px] lg:w-[calc((100%-4.5rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col">
+              <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="h-full w-[calc(50%-6px)] sm:w-[220px] lg:w-[calc((100%-4.5rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
                 <div className="relative rounded-xl overflow-hidden mb-3 aspect-[4/3] bg-gray-100 w-full">
                   <img src={product.image} alt={product.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
 
@@ -389,7 +391,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
       </div>
 
       </main>
-      <HomeScreen2 onAddToCart={onAddToCart} onAddToWishlist={onAddToWishlist} hideHeader={true} hideMobileNav={true} hideWhatsApp={true} />
+      <HomeScreen2 onAddToCart={onAddToCart} onAddToWishlist={onAddToWishlist} onOpenProduct={onOpenProduct} hideHeader={true} hideMobileNav={true} hideWhatsApp={true} />
     </>
   );
 };

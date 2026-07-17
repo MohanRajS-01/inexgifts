@@ -10,7 +10,8 @@ export default function Search({
   onAddToCart,
   onAddToWishlist,
   cartCount,
-  wishlistCount
+  wishlistCount,
+  onOpenProduct
 }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [wishlist, setWishlist] = useState([]);
@@ -38,6 +39,8 @@ export default function Search({
           setActiveNav={(nav) => {
             if (nav === 'home') {
               setView('home1');
+            } else {
+              setView(nav);
             }
           }}
         />
@@ -51,6 +54,7 @@ export default function Search({
             wishlist={wishlist}
             toggleWishlist={toggleWishlist}
             addToCart={onAddToCart}
+            onOpenProduct={onOpenProduct}
           />
         </main>
       </div>
@@ -359,7 +363,7 @@ function StarRating({ rating }) {
 
 
 // ─── ProductCard ─────────────────────────────────────────────────────────────
-export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist }) {
+export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist, onOpenProduct }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -374,6 +378,7 @@ export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist }
       }}
       layout
       className="product-card"
+      onClick={() => onOpenProduct && onOpenProduct(product)}
       data-category={product.category}
     >
       <div className="product-image-container">
@@ -776,6 +781,7 @@ export function WishlistPage({ wishlist, addToCart, toggleWishlist, setActiveNav
                     addToCart={() => addToCart(product)}
                     isWishlisted={true}
                     toggleWishlist={() => toggleWishlist(product)}
+                    onOpenProduct={onOpenProduct}
                   />
                 ))}
               </AnimatePresence>
@@ -1526,7 +1532,8 @@ export function SearchScreen({
   setActiveCategory,
   wishlist,
   toggleWishlist,
-  addToCart
+  addToCart,
+  onOpenProduct
 }) {
   const [drawerOpen, setDrawerOpen] = useState(null);
   const [currentSort, setCurrentSort] = useState('relevance');
@@ -1612,6 +1619,7 @@ export function SearchScreen({
                   addToCart={() => addToCart(p)}
                   isWishlisted={isWishlisted(p)}
                   toggleWishlist={() => toggleWishlist(p)}
+                  onOpenProduct={onOpenProduct}
                 />
               ))}
             </AnimatePresence>
