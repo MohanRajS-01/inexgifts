@@ -89,10 +89,18 @@ const bannerImages = [
   '/Banner4.png'
 ];
 
-const Home = ({ onAddToCart, onAddToWishlist }) => {
+const Home = ({ onAddToCart, onAddToWishlist, onSearch }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
+  const [searchVal, setSearchVal] = useState("");
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (onSearch && searchVal.trim()) {
+      onSearch(searchVal.trim());
+    }
+  };
 
   const handleAddToCartClick = (e, product) => {
     e.preventDefault();
@@ -128,18 +136,20 @@ const Home = ({ onAddToCart, onAddToWishlist }) => {
       )}
       
       {/* Mobile Search Bar */}
-      <div className="md:hidden mb-4">
+      <form onSubmit={handleSearchSubmit} className="md:hidden mb-4">
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <FiSearch className="h-5 w-5 text-gray-400" />
           </div>
           <input
             type="text"
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
             className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-full leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary text-sm shadow-sm"
             placeholder="Search for gifts, frames..."
           />
         </div>
-      </div>
+      </form>
 
       {/* Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6 md:mb-10">

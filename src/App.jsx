@@ -4,9 +4,11 @@ import Home from "./pages/Home/HomeScreen1";
 import MobileBottomNav from "./components/MobileBottom";
 import SplashScreen from "./pages/SplashScreen/SplashScreen";
 import Login from "./pages/Login/Login";
+import Search from "./pages/Search/Search";
 
 function App() {
   const [view, setView] = useState('splash');
+  const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(2); // Starting with 2 to match previous design
   const [wishlistCount, setWishlistCount] = useState(0);
 
@@ -17,6 +19,11 @@ function App() {
     } else {
       setWishlistCount(prev => Math.max(0, prev - 1));
     }
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    setView('search');
   };
 
   return (
@@ -32,9 +39,22 @@ function App() {
       )}
       {view === 'home1' && (
         <div className="min-h-screen flex flex-col bg-gray-50 pb-24 md:pb-0">
-          <Navbar cartCount={cartCount} wishlistCount={wishlistCount} />
-          <Home onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} />
+          <Navbar cartCount={cartCount} wishlistCount={wishlistCount} onSearch={handleSearch} />
+          <Home onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} onSearch={handleSearch} />
           <MobileBottomNav />
+        </div>
+      )}
+      {view === 'search' && (
+        <div className="min-h-screen flex flex-col bg-gray-50 pb-24 md:pb-0">
+          <Search 
+            setView={setView} 
+            searchQuery={searchQuery} 
+            setSearchQuery={setSearchQuery} 
+            onAddToCart={handleAddToCart}
+            onAddToWishlist={handleAddToWishlist}
+            cartCount={cartCount}
+            wishlistCount={wishlistCount}
+          />
         </div>
       )}
     </div>
