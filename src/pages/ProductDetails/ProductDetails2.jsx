@@ -288,7 +288,7 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
   };
 
   return (
-    <div className="app-container">
+    <div className="pd-app-container">
       <header className="app-header">
         <button className="header-btn" aria-label="Go back" onClick={() => onBack && onBack()}>
           <ArrowLeft size={20} />

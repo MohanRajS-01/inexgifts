@@ -93,7 +93,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch, setView }) => {
             <button className="text-[#3b3559] hover:text-primary transition-colors relative" onClick={() => setView && setView('cart')}>
               <FiShoppingCart className="h-[22px] w-[22px] stroke-[2]" />
               {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 flex h-[15px].5 w-[15px] items-center justify-center rounded-full bg-[#de4b83] text-[9px] font-bold text-white">{cartCount}</span>
+                <span className="absolute -top-1.5 -right-2 flex h-[15px] w-[15px] items-center justify-center rounded-full bg-[#de4b83] text-[9px] font-bold text-white">{cartCount}</span>
               )}
             </button>
             <button

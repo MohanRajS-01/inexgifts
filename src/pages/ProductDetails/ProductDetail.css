@@ -1,3 +1,22 @@
+/* ── CSS Custom Properties ───────────────────────────────── */
+:root {
+  --primary-color: #4F37FD;
+  --primary-hover: #3b24e6;
+  --primary-light: #ede9ff;
+  --bg-main: #FFFFFF;
+  --bg-secondary: #F8FAFC;
+  --text-main: #1E293B;
+  --text-secondary: #64748B;
+  --text-tertiary: #94A3B8;
+  --border-color: #F1F5F9;
+  --accent-yellow: #FFB800;
+  --accent-green: #059669;
+  --accent-blue: #3B82F6;
+  --accent-purple: #7C3AED;
+  --accent-pink-bg: #FFE4E6;
+  --accent-pink-text: #F43F5E;
+}
+
 .product-detail-one-main {
   padding: 0 20px 20px;
 }
@@ -310,8 +329,17 @@
 
 .upload-area-container {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .upload-area-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -363,9 +391,15 @@
 
 .upload-arrow {
   color: var(--primary-color);
-  display: flex;
+  display: none;
   align-items: center;
   opacity: 0.6;
+}
+
+@media (min-width: 480px) {
+  .upload-arrow {
+    display: flex;
+  }
 }
 
 .upload-example {
@@ -452,21 +486,29 @@
 
 .check-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 6px;
+  right: 6px;
   background-color: var(--primary-color);
   color: white;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: none;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 2px var(--bg-main);
+  box-shadow: 0 0 0 2px #fff;
+  z-index: 2;
 }
 
 .option-card.active .check-badge {
   display: flex;
+}
+
+/* For row-cards (colors, base), move check to the far right of the row */
+.option-card.row-card .check-badge {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .shape-svg {

@@ -166,9 +166,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
               }`}
             >
               <img src={img} alt={`Banner ${idx + 1}`} className="w-full h-full object-cover" />
-              {idx > 0 && (
-                <div className="absolute inset-0 bg-gradient-to-r from-white/80 via-white/40 to-transparent"></div>
-              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-white/80 via-white/40 to-transparent"></div>
             </div>
           ))}
 
@@ -201,7 +199,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
           </div>
         </div>
 
-        <div className="hidden lg:flex flex-col justify-between h-full">
+        <div className="hidden lg:flex flex-col gap-3 justify-between min-h-[400px]">
           <div className="bg-white p-5 rounded-[24px] border border-slate-400 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center space-x-5 hover:shadow-md transition-all">
              <div className="bg-purple-100/80 w-14 h-14 rounded-2xl flex items-center justify-center text-primary"><FiAward className="h-6 w-6" /></div>
              <div>
@@ -235,21 +233,21 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
 
       {/* Categories */}
       <div className="mb-6 md:mb-12 overflow-x-auto pb-1 md:pb-4 hide-scrollbar">
-        <div className="flex space-x-4 md:justify-between min-w-max px-2">
-          {categories.map((category, index) => (
-            <div key={index} className="flex flex-col items-center space-y-2 cursor-pointer group">
-              <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${category.bgColor} flex items-center justify-center text-3xl shadow-sm group-hover:shadow-md transition-shadow overflow-hidden ${category.isViewAll ? 'text-primary' : ''}`}>
-                {category.image ? (
-                  <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
-                ) : (
-                  category.icon
-                )}
+        <div className="flex space-x-5 md:justify-between min-w-max px-2">
+            {categories.map((category, index) => (
+              <div key={index} className="flex flex-col items-center gap-2 cursor-pointer group">
+                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${category.bgColor} flex items-center justify-center text-3xl shadow-sm group-hover:shadow-md transition-all overflow-hidden border-2 border-white group-hover:border-primary/30 ${category.isViewAll ? 'text-primary' : ''}`}>
+                  {category.image ? (
+                    <img src={category.image} alt={category.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    category.icon
+                  )}
+                </div>
+                <span className={`text-xs md:text-sm font-medium text-center leading-tight ${category.isViewAll ? 'text-primary' : 'text-gray-700'}`}>
+                  {category.name}
+                </span>
               </div>
-              <span className={`text-xs md:text-sm font-medium ${category.isViewAll ? 'text-primary' : 'text-gray-700'}`}>
-                {category.name}
-              </span>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
@@ -265,9 +263,9 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
             </button>
           </div>
   
-          <div className="flex-1 flex overflow-x-auto gap-3 sm:gap-6 pb-2 hide-scrollbar snap-x items-stretch">
+          <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2 hide-scrollbar snap-x items-start">
             {trendingProducts.map((product) => (
-              <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="h-full w-[calc(50%-6px)] sm:w-[220px] lg:w-[calc((100%-4.5rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
+              <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="w-[calc(50%-6px)] sm:w-[200px] lg:w-[calc((100%-3rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
                 <div className="relative rounded-xl overflow-hidden mb-3 aspect-[4/3] bg-gray-100 w-full">
                   <img src={product.image} alt={product.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
 
@@ -291,11 +289,11 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
                     <span className="text-[9px] sm:text-xs text-gray-500 ml-1">{product.rating}</span>
                   </div>
                   <div className="flex items-center justify-between mt-auto pt-1 sm:pt-2">
-                    <div className="flex flex-col">
+                    <div className="flex flex-row items-baseline gap-1 flex-wrap">
+                      <span className="text-sm sm:text-base font-bold text-gray-900 leading-none">₹{product.price}</span>
                       {product.originalPrice && (
-                        <span className="text-[9px] sm:text-xs text-gray-400 line-through leading-none mb-0.5">₹{product.originalPrice}</span>
+                        <span className="text-[9px] sm:text-xs text-gray-400 line-through leading-none">₹{product.originalPrice}</span>
                       )}
-                      <span className="text-sm sm:text-lg font-bold text-gray-900 leading-none">₹{product.price}</span>
                     </div>
                     <button onClick={(e) => handleAddToCartClick(e, product)} className="h-7 w-7 sm:h-9 sm:w-9 bg-primary text-white hover:bg-opacity-90 rounded-full flex items-center justify-center transition-colors shadow-md shadow-primary/20">
                       <FiShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
