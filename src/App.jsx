@@ -21,6 +21,8 @@ function App() {
   const [qty, setQty] = useState(1);
   const [previousView, setPreviousView] = useState('home1');
 
+  const [selectedCategory, setSelectedCategory] = useState('Gift Boxes');
+
   const handleAddToCart = (count = 1) => setCartCount(prev => prev + count);
   const handleAddToWishlist = (isAdded) => {
     if (isAdded) {
@@ -76,7 +78,14 @@ function App() {
           />
         ) : null;
       case 'categories':
-        return <Categories />;
+        return (
+          <Categories 
+            setView={setView} 
+            onSearch={handleSearch} 
+            selectedCategory={selectedCategory} 
+            setSelectedCategory={setSelectedCategory} 
+          />
+        );
       case 'cart':
         return <MyCart />;
       case 'wishlist':
@@ -87,7 +96,16 @@ function App() {
         return <Profile />;
       case 'home1':
       default:
-        return <Home onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} onSearch={handleSearch} onOpenProduct={openProduct} />;
+        return (
+          <Home 
+            onAddToCart={handleAddToCart} 
+            onAddToWishlist={handleAddToWishlist} 
+            onSearch={handleSearch} 
+            onOpenProduct={openProduct} 
+            setView={setView} 
+            setSelectedCategory={setSelectedCategory} 
+          />
+        );
     }
   };
 

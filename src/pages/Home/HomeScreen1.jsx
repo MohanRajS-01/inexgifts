@@ -89,7 +89,7 @@ const bannerImages = [
   '/Banner4.png'
 ];
 
-const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
+const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, setSelectedCategory }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
@@ -235,7 +235,18 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct }) => {
       <div className="mb-6 md:mb-12 overflow-x-auto pb-1 md:pb-4 hide-scrollbar">
         <div className="flex space-x-5 md:justify-between min-w-max px-2">
             {categories.map((category, index) => (
-              <div key={index} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div 
+                key={index} 
+                className="flex flex-col items-center gap-2 cursor-pointer group"
+                onClick={() => {
+                  if (category.isViewAll) {
+                    if (setView) setView('categories');
+                  } else {
+                    if (setSelectedCategory) setSelectedCategory(category.name);
+                    if (setView) setView('categories');
+                  }
+                }}
+              >
                 <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${category.bgColor} flex items-center justify-center text-3xl shadow-sm group-hover:shadow-md transition-all overflow-hidden border-2 border-white group-hover:border-primary/30 ${category.isViewAll ? 'text-primary' : ''}`}>
                   {category.image ? (
                     <img src={category.image} alt={category.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
