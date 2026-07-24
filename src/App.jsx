@@ -11,7 +11,7 @@ import MyOrder from "./pages/Orders/MyOrder";
 import CartPage from "./pages/Cart/CartPage";
 import Wishlist from "./pages/Wishlist/Wishlist";
 import Profile from "./pages/Profile/Profile";
-
+import Gift from "./pages/Gift/Gift";
 const DEFAULT_CART = [
   {
     id: 'led_lamp',
@@ -225,6 +225,17 @@ function App() {
             setSelectedCategory={setSelectedCategory}
           />
         );
+      case 'gift':
+  return (
+    <Gift
+      setView={setView}
+      onAddToCart={handleAddToCart}
+      onAddToWishlist={handleToggleWishlist}
+      onOpenProduct={openProduct}
+      cartCount={cartCount}
+      wishlistCount={wishlistCount}
+    />
+  );
       case 'cart':
         return (
           <CartPage
@@ -263,7 +274,16 @@ function App() {
       view === 'splash' ? 'w-full h-screen overflow-hidden' :
         'w-full min-h-screen bg-gray-50'
     }>
-      {showNav && <Navbar cartCount={cartCount} wishlistCount={wishlistCount} onSearch={handleSearch} setView={setView} />}
+      {showNav && (
+  <div className={view === "gift" ? "hidden md:block" : ""}>
+    <Navbar
+      cartCount={cartCount}
+      wishlistCount={wishlistCount}
+      onSearch={handleSearch}
+      setView={setView}
+    />
+  </div>
+)}
       <div className={showNav ? "pb-24 md:pb-0" : ""}>
         {renderView()}
       </div>

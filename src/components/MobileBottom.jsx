@@ -23,12 +23,12 @@ const MobileBottomNav = ({ setView, currentView }) => {
       {/* Center Gift Button - Floating */}
       <div className="flex-1 flex flex-col items-center justify-center relative -top-5">
         <button 
-          className="h-[56px] w-[56px] rounded-full bg-[#4f46e5] text-white flex items-center justify-center shadow-lg shadow-indigo-500/40 transform transition-transform active:scale-95"
-          onClick={() => setView('home1')}
+          className={`h-[56px] w-[56px] rounded-full text-white flex items-center justify-center shadow-lg transform transition-all active:scale-95 ${currentView === 'gift' ? 'bg-[#5B3EE0] ring-4 ring-indigo-100 shadow-indigo-500/50 scale-105' : 'bg-[#4f46e5] shadow-indigo-500/40'}`}
+          onClick={() => setView('gift')}
         >
           <FiGift className="h-7 w-7 stroke-[2]" />
         </button>
-        <span className="text-[11px] font-medium text-gray-500 mt-1 absolute -bottom-5">Gifts</span>
+        <span className={`text-[11px] font-medium mt-1 absolute -bottom-5 ${currentView === 'gift' ? 'text-[#4f46e5] font-bold' : 'text-gray-500'}`}>Gifts</span>
       </div>
 
       <button 
