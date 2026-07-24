@@ -99,17 +99,27 @@
   transition: transform 0.2s;
 }.pd-app-container .cart-badge.bounce {
   animation: badgeBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}.pd-app-container @keyframes badgeBounce {
-.pd-app-container 0% { transform: scale(1); }.pd-app-container 50% { transform: scale(1.4); }.pd-app-container 100% { transform: scale(1); }
+}
 
-}.pd-app-container .wishlist-icon.active {
+@keyframes badgeBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.pd-app-container .wishlist-icon.active {
   fill: #EF4444;
   stroke: #EF4444;
   animation: heartPulse 0.3s ease-out;
-}.pd-app-container @keyframes heartPulse {
-.pd-app-container 0% { transform: scale(1); }.pd-app-container 50% { transform: scale(1.3); }.pd-app-container 100% { transform: scale(1); }
+}
 
-}.pd-app-container /* Tab Navigation */
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.pd-app-container /* Tab Navigation */
 .tab-nav {
   display: flex;
   position: sticky;
@@ -279,16 +289,22 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}.pd-app-container .promo-img {
+}
+
+.pd-app-container .promo-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
   animation: giftWobble 4s infinite ease-in-out;
-}.pd-app-container @keyframes giftWobble {
-.pd-app-container 0%, .pd-app-container 100% { transform: rotate(0deg); }.pd-app-container 50% { transform: rotate(5deg) scale(1.05); }
+}
 
-}.pd-app-container /* Product Details Section */
+@keyframes giftWobble {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(5deg) scale(1.05); }
+}
+
+.pd-app-container /* Product Details Section */
 .details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -884,7 +900,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-}.pd-app-container /* ============================================================
+}
+
+/* ============================================================
    TABLET RESPONSIVE — 640px+
    ============================================================ */
 @media (min-width: 640px) {
@@ -915,7 +933,9 @@
     padding: 20px 40px;
   }
 
-}.pd-app-container /* ============================================================
+}
+
+/* ============================================================
    DESKTOP RESPONSIVE — 1024px+
    ============================================================ */
 @media (min-width: 1024px) {
