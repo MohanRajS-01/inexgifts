@@ -3,27 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { productsData } from '../../data/products';
 import './Search.css';
 
-export default function Search({ 
-  setView, 
-  searchQuery, 
-  setSearchQuery, 
+export default function Search({
+  setView,
+  searchQuery,
+  setSearchQuery,
   onAddToCart,
   onAddToWishlist,
+  wishlistItems = [],
   cartCount,
   wishlistCount,
   onOpenProduct
 }) {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [wishlist, setWishlist] = useState([]);
 
   const toggleWishlist = (product) => {
-    const isInWishlist = wishlist.some(item => item.title === product.title);
-    if (isInWishlist) {
-      setWishlist(prev => prev.filter(item => item.title !== product.title));
-      if (onAddToWishlist) onAddToWishlist(false);
-    } else {
-      setWishlist(prev => [...prev, product]);
-      if (onAddToWishlist) onAddToWishlist(true);
+    if (onAddToWishlist) {
+      onAddToWishlist(product);
     }
   };
 
@@ -51,7 +46,7 @@ export default function Search({
             setSearchQuery={setSearchQuery}
             activeCategory={activeCategory}
             setActiveCategory={setActiveCategory}
-            wishlist={wishlist}
+            wishlistItems={wishlistItems}
             toggleWishlist={toggleWishlist}
             addToCart={onAddToCart}
             onOpenProduct={onOpenProduct}
@@ -96,18 +91,18 @@ export function StatusBar() {
 
 
 // ─── Header ──────────────────────────────────────────────────────────────────
-export function Header({ 
-  searchQuery, 
-  setSearchQuery, 
-  clearSearch, 
+export function Header({
+  searchQuery,
+  setSearchQuery,
+  clearSearch,
   cartCount,
   activeNav,
   setActiveNav
 }) {
   return (
     <header className="app-header">
-      <button 
-        className="icon-btn back-btn" 
+      <button
+        className="icon-btn back-btn"
         aria-label="Go back"
         onClick={() => setActiveNav('home')}
         style={{ visibility: activeNav !== 'home' ? 'visible' : 'hidden' }}
@@ -132,12 +127,12 @@ export function Header({
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input 
-          type="text" 
-          className="search-input" 
-          value={searchQuery} 
+        <input
+          type="text"
+          className="search-input"
+          value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search products..." 
+          placeholder="Search products..."
         />
         {searchQuery && (
           <button className="clear-btn" aria-label="Clear search" onClick={clearSearch}>
@@ -157,9 +152,9 @@ export function Header({
 
       <div className="desktop-nav-menu">
         {['home', 'categories', 'wishlist', 'orders', 'profile'].map((nav) => (
-          <a 
+          <a
             key={nav}
-            href="#" 
+            href="#"
             className={`desktop-nav-link ${activeNav === nav ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveNav(nav); }}
           >
@@ -168,8 +163,8 @@ export function Header({
         ))}
       </div>
 
-      <button 
-        className={`icon-btn cart-btn ${activeNav === 'cart' ? 'active' : ''}`} 
+      <button
+        className={`icon-btn cart-btn ${activeNav === 'cart' ? 'active' : ''}`}
         aria-label="Shopping Cart"
         onClick={() => setActiveNav('cart')}
       >
@@ -178,7 +173,7 @@ export function Header({
           <circle cx="20" cy="21" r="1" />
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
         </svg>
-        <motion.span 
+        <motion.span
           key={cartCount}
           initial={{ scale: 0.2 }}
           animate={{ scale: 1 }}
@@ -200,8 +195,8 @@ export function Sidebar({ filters, handleFilterChange }) {
       <h4>{title}</h4>
       {options.map((opt) => (
         <label key={opt.id} className="checkbox-option">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             checked={!!filters[opt.id]}
             onChange={(e) => handleFilterChange(opt.id, e.target.checked)}
           />
@@ -213,36 +208,36 @@ export function Sidebar({ filters, handleFilterChange }) {
 
   return (
     <aside className="desktop-sidebar">
-      <FilterGroup 
-        title="Price" 
+      <FilterGroup
+        title="Price"
         options={[
           { id: 'priceUnder500', label: 'Under ₹500' },
           { id: 'price500to1000', label: '₹500 - ₹1,000' },
           { id: 'priceOver1000', label: 'Over ₹1,000' }
-        ]} 
+        ]}
       />
-      <FilterGroup 
-        title="Material" 
+      <FilterGroup
+        title="Material"
         options={[
           { id: 'matWooden', label: 'Wooden' },
           { id: 'matAcrylic', label: 'Acrylic' },
           { id: 'matLed', label: 'LED Glow Glass' },
           { id: 'matOther', label: 'Metal & Other' }
-        ]} 
+        ]}
       />
-      <FilterGroup 
-        title="Rating" 
+      <FilterGroup
+        title="Rating"
         options={[
           { id: 'ratingHigh', label: '4.5 ★ & above' },
           { id: 'ratingMedium', label: '4.0 ★ & above' }
-        ]} 
+        ]}
       />
-      <FilterGroup 
-        title="Discount" 
+      <FilterGroup
+        title="Discount"
         options={[
           { id: 'discount30', label: '30% and above' },
           { id: 'discount40', label: '40% and above' }
-        ]} 
+        ]}
       />
     </aside>
   );
@@ -272,8 +267,8 @@ export function Categories({ activeCategory, setActiveCategory }) {
   return (
     <section className="horizontal-scroll categories-section">
       {categoriesData.map((cat) => (
-        <div 
-          key={cat.id} 
+        <div
+          key={cat.id}
           className={`category-item ${activeCategory === cat.id ? 'active' : ''}`}
           onClick={() => setActiveCategory(cat.id)}
         >
@@ -316,8 +311,8 @@ export function FilterTags({ minPrice500, setMinPrice500, openFilterDrawer }) {
         </button>
       ))}
 
-      <button 
-        className={`filter-pill min500-pill ${minPrice500 ? 'active' : ''}`} 
+      <button
+        className={`filter-pill min500-pill ${minPrice500 ? 'active' : ''}`}
         onClick={() => setMinPrice500(!minPrice500)}
       >
         <span>Min ₹500</span>
@@ -395,7 +390,7 @@ export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist, 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            toggleWishlist();
+            toggleWishlist(product);
           }}
         >
           <svg
@@ -447,7 +442,7 @@ export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist, 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            addToCart();
+            addToCart(product);
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
@@ -466,47 +461,57 @@ export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist, 
 // ─── BottomNav ───────────────────────────────────────────────────────────────
 export function BottomNav({ activeNav, setActiveNav, wishlistCount }) {
   const navItems = [
-    { id: 'home', label: 'Home', svg: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    )},
-    { id: 'categories', label: 'Categories', svg: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
-      </svg>
-    )},
-    { id: 'wishlist', label: 'Wishlist', svgClass: 'nav-heart-svg', svg: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="nav-heart-svg">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-      </svg>
-    )},
-    { id: 'orders', label: 'Orders', svg: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-      </svg>
-    )},
-    { id: 'profile', label: 'Profile', svg: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    )}
+    {
+      id: 'home', label: 'Home', svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      )
+    },
+    {
+      id: 'categories', label: 'Categories', svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg>
+      )
+    },
+    {
+      id: 'wishlist', label: 'Wishlist', svgClass: 'nav-heart-svg', svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="nav-heart-svg">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+      )
+    },
+    {
+      id: 'orders', label: 'Orders', svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+      )
+    },
+    {
+      id: 'profile', label: 'Profile', svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      )
+    }
   ];
 
   return (
     <footer className="app-footer">
       <nav className="bottom-nav">
         {navItems.map(item => (
-          <a 
-            key={item.id} 
-            href="#" 
+          <a
+            key={item.id}
+            href="#"
             className={`nav-item ${activeNav === item.id ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveNav(item.id); }}
             style={{ position: 'relative' }}
@@ -514,7 +519,7 @@ export function BottomNav({ activeNav, setActiveNav, wishlistCount }) {
             {item.svg}
             <span className="nav-label">{item.label}</span>
             {item.id === 'wishlist' && wishlistCount > 0 && (
-              <motion.span 
+              <motion.span
                 key={wishlistCount}
                 initial={{ scale: 0.2 }}
                 animate={{ scale: 1 }}
@@ -534,12 +539,12 @@ export function BottomNav({ activeNav, setActiveNav, wishlistCount }) {
 
 
 // ─── Drawers ─────────────────────────────────────────────────────────────────
-export function Drawers({ 
-  drawerOpen, 
-  closeDrawers, 
-  currentSort, 
-  setCurrentSort, 
-  filters, 
+export function Drawers({
+  drawerOpen,
+  closeDrawers,
+  currentSort,
+  setCurrentSort,
+  filters,
   handleFilterChange,
   activeFilterTab,
   setActiveFilterTab
@@ -570,7 +575,7 @@ export function Drawers({
             { id: 'rating', label: 'Customer Rating' },
             { id: 'popularity', label: 'Popularity' }
           ].map(opt => (
-            <div 
+            <div
               key={opt.id}
               className={`sort-option ${currentSort === opt.id ? 'active' : ''}`}
               onClick={() => { setCurrentSort(opt.id); closeDrawers(); }}
@@ -598,7 +603,7 @@ export function Drawers({
         <div className="drawer-content filter-drawer-grid">
           <div className="filter-sidebar">
             {['price', 'material', 'rating', 'discount'].map(tab => (
-              <div 
+              <div
                 key={tab}
                 className={`sidebar-tab ${activeFilterTab === tab ? 'active' : ''}`}
                 onClick={() => setActiveFilterTab(tab)}
@@ -707,7 +712,7 @@ export function WishlistPage({ wishlist, addToCart, toggleWishlist, setActiveNav
   return (
     <div className="main-container-inner">
       <div className="content-pane" style={{ width: '100%', flexGrow: 1 }}>
-        
+
         {/* Premium favorites header banner */}
         <div className="wishlist-banner" style={{
           background: 'linear-gradient(135deg, #ff3b5c 0%, #ff6b8b 100%)',
@@ -802,7 +807,7 @@ export function CartPage({ cart, removeFromCart, updateCartQuantity, setActiveNa
 
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const originalSubtotal = cart.reduce((acc, item) => acc + (item.originalPrice || item.price) * item.quantity, 0);
-  
+
   // Free Shipping Threshold (₹500)
   const freeShippingThreshold = 500;
   const deliveryFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 49;
@@ -839,7 +844,7 @@ export function CartPage({ cart, removeFromCart, updateCartQuantity, setActiveNa
   return (
     <div className="main-container-inner">
       <div className="content-pane" style={{ width: '100%', flexGrow: 1 }}>
-        
+
         {/* Premium shopping bag banner */}
         <div className="cart-banner" style={{
           background: 'linear-gradient(135deg, var(--primary-color) 0%, #6e5eff 100%)',
@@ -908,7 +913,7 @@ export function CartPage({ cart, removeFromCart, updateCartQuantity, setActiveNa
         ) : (
           <div className="cart-layout" style={{ marginTop: '0' }}>
             <div className="cart-items-section">
-              
+
               {/* Free Shipping Progress Indicator */}
               <div style={{
                 background: 'var(--bg-card)',
@@ -997,7 +1002,7 @@ export function CartPage({ cart, removeFromCart, updateCartQuantity, setActiveNa
             </div>
 
             <div className="cart-summary-section">
-              
+
               {/* Promo Code Card */}
               <div style={{
                 background: 'var(--bg-card)',
@@ -1165,10 +1170,10 @@ export function ProfilePage({ setActiveNav, showToast }) {
     {
       title: 'Support & Settings',
       items: [
-        { 
-          id: 'help', 
-          label: 'Help Center & Chat', 
-          desc: '24/7 support for order or payment issues', 
+        {
+          id: 'help',
+          label: 'Help Center & Chat',
+          desc: '24/7 support for order or payment issues',
           icon: (
             <svg viewBox="0 0 24 24" fill="#25d366" width="22" height="22" style={{ display: 'block' }}>
               <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.335 4.963L2 22l5.233-1.371a9.944 9.944 0 0 0 4.779 1.21h.004c5.505 0 9.99-4.478 9.99-9.985A9.998 9.998 0 0 0 12.012 2zm5.835 14.16c-.252.712-1.258 1.309-1.737 1.39-.479.08-1.102.138-1.785-.08a11.173 11.173 0 0 1-4.148-2.617 12.018 12.018 0 0 1-2.863-3.957c-.439-.757-.042-1.172.339-1.579.18-.193.398-.456.596-.684.198-.228.264-.38.397-.65.132-.27.066-.507-.033-.705-.099-.198-.891-2.147-1.221-2.943-.321-.775-.65-.67-.892-.682-.23-.012-.495-.015-.76-.015-.264 0-.693.099-1.056.494-.363.395-1.385 1.353-1.385 3.3 0 1.947 1.419 3.824 1.617 4.088.198.264 2.793 4.265 6.766 5.981 2.378 1.028 3.328 1.139 4.542.957.734-.11 2.248-.92 2.562-1.81.314-.89.314-1.654.22-1.812-.094-.158-.347-.253-.699-.429z" />
@@ -1188,7 +1193,7 @@ export function ProfilePage({ setActiveNav, showToast }) {
   return (
     <div className="main-container-inner">
       <div className="content-pane" style={{ width: '100%', flexGrow: 1 }}>
-        
+
         {/* Profile Card Banner */}
         <div style={{
           background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
@@ -1212,7 +1217,7 @@ export function ProfilePage({ setActiveNav, showToast }) {
             background: 'rgba(255, 255, 255, 0.03)',
             borderRadius: '50%'
           }}></div>
-          
+
           <div style={{
             width: '72px',
             height: '72px',
@@ -1380,7 +1385,7 @@ export function OrdersPage({ setActiveNav }) {
   return (
     <div className="main-container-inner">
       <div className="content-pane" style={{ width: '100%', flexGrow: 1 }}>
-        
+
         {/* Orders Page Banner */}
         <div className="orders-banner" style={{
           background: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)',
@@ -1530,7 +1535,7 @@ export function SearchScreen({
   setSearchQuery,
   activeCategory,
   setActiveCategory,
-  wishlist,
+  wishlistItems = [],
   toggleWishlist,
   addToCart,
   onOpenProduct
@@ -1540,7 +1545,8 @@ export function SearchScreen({
   const [activeFilterTab, setActiveFilterTab] = useState('price');
   const [filters, setFilters] = useState({});
 
-  const isWishlisted = (product) => wishlist.some(item => item.title === product.title);
+  const isWishlisted = (product) =>
+    wishlistItems && wishlistItems.some(item => String(item.id) === String(product.id) || item.title === product.title);
 
   const handleFilterChange = (id, value) => {
     if (id === 'clearAll') { setFilters({}); return; }
@@ -1594,12 +1600,12 @@ export function SearchScreen({
           </button>
         </section>
 
-        <Categories 
-          activeCategory={activeCategory} 
+        <Categories
+          activeCategory={activeCategory}
           setActiveCategory={(category) => {
             setActiveCategory(category);
             setSearchQuery('');
-          }} 
+          }}
         />
 
         <FilterTags

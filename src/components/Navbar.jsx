@@ -16,7 +16,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch, setView }) => {
     <nav className="bg-white border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 md:h-20 items-center">
-          
+
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => setView && setView('home1')}>
             <span className="text-xl font-bold text-primary tracking-tight">
@@ -70,7 +70,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch, setView }) => {
             <div className="flex items-center ml-4 cursor-pointer hover:opacity-80" onClick={() => setView && setView('profile')}>
               <div className="h-9 w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300 flex items-center justify-center text-gray-500">
                 U
-               </div>
+              </div>
               <div className="ml-2 flex flex-col">
                 <span className="text-xs text-gray-500 leading-tight">Hello, Priya</span>
                 <span className="text-sm font-semibold text-gray-800 leading-tight">My Account ▾</span>
@@ -110,7 +110,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0, onSearch, setView }) => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t">
           <div className="px-4 pt-4 pb-3 space-y-1">
-             <form onSubmit={handleSearchSubmit} className="relative w-full mb-4">
+            <form onSubmit={handleSearchSubmit} className="relative w-full mb-4">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiSearch className="h-5 w-5 text-gray-400" />
               </div>

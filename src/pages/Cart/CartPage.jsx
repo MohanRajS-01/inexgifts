@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../../style.css';
 import Header from '../components/Header';
 import CartTabs from '../components/CartTabs';
 import CartItem from '../components/CartItem';
@@ -9,105 +10,35 @@ import Popup from '../components/Popup';
 import CheckoutModal from '../components/CheckoutModal';
 import BottomNavbar from '../components/BottomNavbar';
 
-// Import local image assets
-import ledLampImg from '../assets/images/led_lamp.png';
-import cushionImg from '../assets/images/cushion.png';
-import giftSetImg from '../assets/images/gift_set.png';
-import collageFrameImg from '../assets/images/collage_frame.png';
-import customizedMugImg from '../assets/images/customized_mug.png';
-import keychainImg from '../assets/images/keychain.png';
-import acrylicFrameImg from '../assets/images/acrylic_frame.png';
-import explosionBoxImg from '../assets/images/explosion_box.png';
+// Public asset image paths
+const ledLampImg = '/assets/images/products/led_photo_lamp.jpg';
+const cushionImg = '/assets/cushion.png';
+const giftSetImg = '/assets/images/products/premium_gift_set.jpg';
+const collageFrameImg = '/assets/images/products/wooden_collage_frame.jpg';
+const customizedMugImg = '/assets/images/products/customized_mug.jpg';
+const keychainImg = '/assets/images/products/photo_keychain.jpg';
+const acrylicFrameImg = '/acrylic_frame.png';
+const explosionBoxImg = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=900&q=80';
 
-const CartPage = () => {
+const CartPage = ({
+  cartItems,
+  setCartItems,
+  wishlistItems,
+  setWishlistItems,
+  initialTab = 'cart',
+  onBack
+}) => {
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState('cart'); // 'cart' or 'wishlist'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'cart' or 'wishlist'
   const [activeNav, setActiveNav] = useState('gifts'); // Bottom navbar selection
   const [toastMsg, setToastMsg] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
 
-  // Cart list
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 'led_lamp',
-      title: 'LED Photo Lamp',
-      subtitle: 'Personalized with 1 photo',
-      image: ledLampImg,
-      originalPrice: 1299,
-      currentPrice: 999,
-      discount: 23,
-      quantity: 1,
-      optionType: 'Size',
-      selectedOption: 'Medium',
-      options: ['Medium', 'Small', 'Large']
-    },
-    {
-      id: 'photo_cushion',
-      title: 'Photo Cushion',
-      subtitle: 'Personalized with 6 photos',
-      image: cushionImg,
-      originalPrice: 599,
-      currentPrice: 499,
-      discount: 17,
-      quantity: 1,
-      optionType: 'Size',
-      selectedOption: '16 x 16 inch',
-      options: ['16 x 16 inch', '12 x 12 inch', '18 x 18 inch']
-    },
-    {
-      id: 'gift_set',
-      title: 'Premium Gift Set',
-      subtitle: 'Blue Edition',
-      image: giftSetImg,
-      originalPrice: 1999,
-      currentPrice: 1499,
-      discount: 25,
-      quantity: 1,
-      optionType: 'Color',
-      selectedOption: 'Blue',
-      options: ['Blue', 'Black', 'Brown']
-    },
-    {
-      id: 'mini_gift_box',
-      title: 'Mini Surprise Gift Box',
-      subtitle: 'Festive edition',
-      image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80',
-      originalPrice: 1299,
-      currentPrice: 949,
-      discount: 27,
-      quantity: 1,
-      optionType: 'Color',
-      selectedOption: 'Red & Black',
-      options: ['Red & Black', 'Blue & Gold']
-    },
-    {
-      id: 'name_plate',
-      title: 'Acrylic Name Plate',
-      subtitle: 'Personalized gift',
-      image: 'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=900&q=80',
-      originalPrice: 899,
-      currentPrice: 699,
-      discount: 22,
-      quantity: 1,
-      optionType: 'Size',
-      selectedOption: 'Medium',
-      options: ['Medium', 'Large']
-    }
-  ]);
-
-  // Wishlist list
-  const [wishlistItems, setWishlistItems] = useState([
-    { id: 'collage_frame', title: 'Wooden Collage Photo Frame', price: 749, image: collageFrameImg },
-    { id: 'customized_mug', title: 'Customized Mug', price: 299, image: customizedMugImg },
-    { id: 'keychain', title: 'Personalized Keychain', price: 199, image: keychainImg },
-    { id: 'acrylic_frame', title: 'Acrylic LED Frame', price: 899, image: acrylicFrameImg },
-    { id: 'explosion_box', title: 'Explosion Gift Box', price: 1199, image: explosionBoxImg },
-    { id: 'mini_gift_box', title: 'Mini Surprise Gift Box', price: 949, image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80' },
-    { id: 'name_plate', title: 'Acrylic Name Plate', price: 699, image: 'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=900&q=80' },
-    { id: 'memory_kit', title: 'Memory Lane Gift Kit', price: 899, image: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=900&q=80' }
-  ]);
+  // cartItems and wishlistItems come exclusively from App.jsx (single source of truth)
+  const safeCartItems = cartItems || [];
+  const safeWishlistItems = wishlistItems || [];
 
   // --- TOAST TRIGGER ---
   const triggerToast = (msg) => {
@@ -119,26 +50,26 @@ const CartPage = () => {
   // Quantity Change
   const handleQtyChange = (id, newQty) => {
     if (newQty < 1) return;
-    setCartItems(cartItems.map(item => 
+    setCartItems(safeCartItems.map(item =>
       item.id === id ? { ...item, quantity: newQty } : item
     ));
   };
 
   // Dropdown Change
   const handleOptionChange = (id, newOption) => {
-    setCartItems(cartItems.map(item => 
+    setCartItems(safeCartItems.map(item =>
       item.id === id ? { ...item, selectedOption: newOption } : item
     ));
   };
 
   // Wishlist Toggle inside Cart Item
   const handleWishlistToggle = (itemId) => {
-    const isAlreadyWishlisted = wishlistItems.some(item => item.id === itemId);
-    const cartItem = cartItems.find(item => item.id === itemId);
+    const isAlreadyWishlisted = safeWishlistItems.some(item => item.id === itemId);
+    const cartItem = safeCartItems.find(item => item.id === itemId);
 
     if (isAlreadyWishlisted) {
       // Remove from wishlist
-      setWishlistItems(wishlistItems.filter(item => item.id !== itemId));
+      setWishlistItems(safeWishlistItems.filter(item => item.id !== itemId));
       triggerToast("Removed from Wishlist 💔");
     } else {
       // Add to wishlist
@@ -148,21 +79,20 @@ const CartPage = () => {
         price: cartItem ? cartItem.currentPrice : 999,
         image: cartItem ? cartItem.image : ledLampImg
       };
-      setWishlistItems([...wishlistItems, newWishlistItem]);
+      setWishlistItems([...safeWishlistItems, newWishlistItem]);
       triggerToast("Added to Wishlist ❤️");
     }
   };
 
-  // Delete Cart Item
+  // Delete Cart Item with Confirmation Popup
   const handleDeleteTrigger = (id) => {
-    console.log('Delete triggered for ID:', id);
     setDeleteConfirmId(id);
   };
 
   const confirmDelete = () => {
     if (!deleteConfirmId) return;
-    setCartItems((prevItems) => prevItems.filter(item => item.id !== deleteConfirmId));
-    triggerToast("Item removed from cart.");
+    setCartItems(prev => prev.filter(item => item.id !== deleteConfirmId));
+    triggerToast("Item removed from cart 🗑️");
     setDeleteConfirmId(null);
   };
 
@@ -177,59 +107,55 @@ const CartPage = () => {
 
   // Add Item to Cart from Wishlist (Moves the item)
   const handleMoveToCart = (item) => {
-    // Check if product is already in cart
-    const existing = cartItems.find(c => c.id === item.id);
-    if (existing) {
-      setCartItems(cartItems.map(c => 
-        c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-      ));
-    } else {
-      // Add new cart item with defaults
-      const mapping = {
-        collage_frame: { original: 999, discount: 25, optionType: 'Size', defaultOpt: 'Standard', opts: ['Standard', 'Large'] },
-        customized_mug: { original: 399, discount: 25, optionType: 'Color', defaultOpt: 'White', opts: ['White', 'Black'] },
-        keychain: { original: 299, discount: 33, optionType: 'Material', defaultOpt: 'Metal', opts: ['Metal', 'Wood'] },
-        acrylic_frame: { original: 1199, discount: 25, optionType: 'Size', defaultOpt: 'Medium', opts: ['Medium', 'Large'] },
-        explosion_box: { original: 1599, discount: 25, optionType: 'Color', defaultOpt: 'Red & Black', opts: ['Red & Black', 'Blue & Gold'] },
-        mini_gift_box: { original: 1299, discount: 27, optionType: 'Color', defaultOpt: 'Red & Black', opts: ['Red & Black', 'Blue & Gold'] },
-        name_plate: { original: 899, discount: 22, optionType: 'Size', defaultOpt: 'Medium', opts: ['Medium', 'Large'] },
-        memory_kit: { original: 1199, discount: 25, optionType: 'Color', defaultOpt: 'Blue', opts: ['Blue', 'Brown'] }
-      };
+    if (!item) return;
+    const targetId = String(item.id || item.title);
+    const itemTitle = item.title || 'Custom Product';
 
-      const meta = mapping[item.id] || { original: item.price, discount: 0, optionType: 'Size', defaultOpt: 'Standard', opts: ['Standard'] };
+    // Check if product is already in cart
+    const existingIndex = safeCartItems.findIndex(c => String(c.id) === targetId || c.title === itemTitle);
+    if (existingIndex > -1) {
+      const updatedCart = [...safeCartItems];
+      updatedCart[existingIndex] = {
+        ...updatedCart[existingIndex],
+        quantity: (updatedCart[existingIndex].quantity || 1) + 1
+      };
+      setCartItems(updatedCart);
+    } else {
+      const itemPrice = typeof item.price === 'number' ? item.price : (item.currentPrice || parseFloat(String(item.price || '999').replace(/[^0-9.]/g, '')) || 999);
+      const origPrice = item.originalPrice ? (typeof item.originalPrice === 'number' ? item.originalPrice : parseFloat(String(item.originalPrice).replace(/[^0-9.]/g, ''))) : Math.round(itemPrice * 1.25);
 
       const newCartItem = {
-        id: item.id,
-        title: item.title,
-        subtitle: 'From your wishlist',
-        image: item.image,
-        originalPrice: meta.original,
-        currentPrice: item.price,
-        discount: meta.discount,
+        id: item.id || targetId,
+        title: itemTitle,
+        subtitle: item.subtitle || 'From Wishlist',
+        image: item.image || '/assets/images/products/led_photo_lamp.jpg',
+        originalPrice: origPrice,
+        currentPrice: itemPrice,
+        discount: Math.round(((origPrice - itemPrice) / origPrice) * 100) || 20,
         quantity: 1,
-        optionType: meta.optionType,
-        selectedOption: meta.defaultOpt,
-        options: meta.opts
+        optionType: 'Size',
+        selectedOption: 'Standard',
+        options: ['Standard', 'Large']
       };
-      setCartItems([...cartItems, newCartItem]);
+      setCartItems([...safeCartItems, newCartItem]);
     }
 
     // Remove from wishlist
-    setWishlistItems(wishlistItems.filter(w => w.id !== item.id));
+    setWishlistItems(prevWish => prevWish.filter(w => String(w.id) !== targetId && w.title !== itemTitle));
     triggerToast("Added to Cart 🛒");
   };
 
   // Wishlist card heart toggle (removes from wishlist)
   const handleRemoveFromWishlist = (id) => {
-    setWishlistItems(wishlistItems.filter(w => w.id !== id));
+    setWishlistItems(safeWishlistItems.filter(w => w.id !== id));
     triggerToast("Removed from Wishlist 💔");
   };
 
-  const pendingDeleteItem = cartItems.find(item => item.id === deleteConfirmId);
+  const pendingDeleteItem = safeCartItems.find(item => item.id === deleteConfirmId);
 
   // Checkout handlers
   const handleCheckout = () => {
-    if (cartItems.length === 0) {
+    if (safeCartItems.length === 0) {
       triggerToast("Your cart is empty! 🛒");
       return;
     }
@@ -238,15 +164,17 @@ const CartPage = () => {
 
   const handleContinueShopping = () => {
     setCheckoutOpen(false);
-    // Reset/clear cart items or keep them? Usually continue shopping closes the success state. Let's clear the cart on success!
     setCartItems([]);
     setAppliedCoupon(null);
+    if (onBack) {
+      onBack();
+    }
   };
 
   // Render content depending on active Tab
   const renderTabContent = () => {
     if (activeTab === 'cart') {
-      if (cartItems.length === 0) {
+      if (safeCartItems.length === 0) {
         return (
           <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--secondary-text)' }}>
             <div style={{ width: '72px', height: '72px', margin: '0 auto 20px', borderRadius: '24px', backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -272,30 +200,30 @@ const CartPage = () => {
       return (
         <>
           <div className="cart-items-container">
-            {cartItems.map((item) => (
-              <CartItem 
+            {safeCartItems.map((item) => (
+              <CartItem
                 key={item.id}
                 item={item}
                 onQtyChange={handleQtyChange}
                 onDelete={handleDeleteTrigger}
                 onWishlistToggle={handleWishlistToggle}
                 onOptionChange={handleOptionChange}
-                isWishlisted={wishlistItems.some(w => w.id === item.id)}
+                isWishlisted={safeWishlistItems.some(w => w.id === item.id)}
               />
             ))}
           </div>
 
           {/* Promo code entry */}
-          <PromoCode 
-            appliedCoupon={appliedCoupon} 
-            onApplyCoupon={handleApplyCoupon} 
-            onToast={triggerToast} 
+          <PromoCode
+            appliedCoupon={appliedCoupon}
+            onApplyCoupon={handleApplyCoupon}
+            onToast={triggerToast}
           />
 
           {/* Price breakup card */}
-          <PriceDetails 
-            cartItems={cartItems} 
-            appliedCoupon={appliedCoupon} 
+          <PriceDetails
+            cartItems={safeCartItems}
+            appliedCoupon={appliedCoupon}
           />
 
           {/* Proceed to checkout button */}
@@ -309,12 +237,12 @@ const CartPage = () => {
     } else {
       // Direct full-page style Wishlist view if tab toggled
       return (
-        <div className="cart-items-container">
-          <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', padding: '0 20px' }}>My Wishlist ({wishlistItems.length})</h2>
-          {wishlistItems.length > 0 ? (
-            <div className="wishlist-vertical-list">
-              {wishlistItems.map((item) => (
-                <WishlistCard 
+        <div className="pt-4">
+          <h2 className="text-base font-bold text-gray-800 mb-3 sm:mb-4">My Wishlist ({safeWishlistItems.length})</h2>
+          {safeWishlistItems.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+              {safeWishlistItems.map((item) => (
+                <WishlistCard
                   key={item.id}
                   item={item}
                   onRemoveFromWishlist={handleRemoveFromWishlist}
@@ -334,7 +262,7 @@ const CartPage = () => {
   };
 
   return (
-    <div className="app-container">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Toast Notifications */}
       {toastMsg && (
         <div className="toast-container">
@@ -342,45 +270,40 @@ const CartPage = () => {
         </div>
       )}
 
-      {/* Header */}
-      <Header 
-        cartCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
-        onTabChange={setActiveTab} 
-        activeTab={activeTab} 
-      />
+      {/* Header removed */}
 
       {/* Tabs */}
-      <CartTabs 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-        cartCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-        wishlistCount={wishlistItems.length}
+      <CartTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        cartCount={safeCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)}
+        wishlistCount={safeWishlistItems.length}
       />
 
       {/* Scrollable Content */}
-      <div className="app-content">
+      <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pb-24 md:pb-10">
         {renderTabContent()}
 
         {/* Wishlist Bottom Section (always visible on Cart tab matching screenshot) */}
         {activeTab === 'cart' && (
-          <div className="wishlist-section">
-            <div className="wishlist-section-header">
-              <h3 className="wishlist-section-title">Wishlist ({wishlistItems.length})</h3>
-              <a 
-                href="#" 
-                className="view-all-link"
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-sm sm:text-base font-bold text-gray-800">Wishlist ({safeWishlistItems.length})</h3>
+              <a
+                href="#"
+                className="text-xs sm:text-sm font-semibold text-indigo-600 hover:underline"
                 onClick={(e) => {
                   e.preventDefault();
                   setActiveTab('wishlist');
                 }}
               >
-                View All &gt;
+                View All &rsaquo;
               </a>
             </div>
-            {wishlistItems.length > 0 ? (
-              <div className="wishlist-vertical-list">
-                {wishlistItems.slice(0, 5).map((item) => (
-                  <WishlistCard 
+            {safeWishlistItems.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                {safeWishlistItems.slice(0, 5).map((item) => (
+                  <WishlistCard
                     key={item.id}
                     item={item}
                     onRemoveFromWishlist={handleRemoveFromWishlist}
@@ -402,25 +325,31 @@ const CartPage = () => {
       <BottomNavbar activeNav={activeNav} onNavChange={setActiveNav} />
 
       {/* Checkout Modal */}
-      <CheckoutModal 
-        isOpen={checkoutOpen} 
-        onClose={() => setCheckoutOpen(false)} 
-        onContinue={handleContinueShopping} 
+      <CheckoutModal
+        isOpen={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        onContinue={handleContinueShopping}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Popup Modal */}
       {deleteConfirmId && (
-        <div className="modal-overlay" onClick={() => setDeleteConfirmId(null)}>
-          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="confirm-title">Remove Item?</h3>
-            <p className="confirm-desc">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-sm w-full shadow-xl border border-gray-100 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900">Remove Item?</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
               Are you sure you want to remove this product from your cart?
             </p>
-            <div className="confirm-btn-row">
-              <button className="confirm-btn cancel" onClick={() => setDeleteConfirmId(null)}>
+            <div className="flex gap-3 mt-2">
+              <button
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setDeleteConfirmId(null)}
+              >
                 Cancel
               </button>
-              <button className="confirm-btn danger" onClick={confirmDelete}>
+              <button
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-sm"
+                onClick={confirmDelete}
+              >
                 Delete
               </button>
             </div>

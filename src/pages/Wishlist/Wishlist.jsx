@@ -1,10 +1,15 @@
 import React from 'react';
+import CartPage from '../Cart/CartPage';
 
-export default function Wishlist({ setView, wishlist, toggleWishlist, setSelectedProductId, addToCart }) {
+export default function Wishlist({ wishlistItems, setWishlistItems, cartItems, setCartItems, onAddToCart, setView }) {
   return (
-    <div className="main-content" style={{ padding: '20px', textAlign: 'center', color: '#1E293B' }}>
-      <h2>❤️ Wishlist</h2>
-      <p style={{ color: '#64748B', marginTop: 8 }}>This page is under construction.</p>
-    </div>
+    <CartPage
+      initialTab="wishlist"
+      cartItems={cartItems}
+      setCartItems={setCartItems}
+      wishlistItems={wishlistItems}
+      setWishlistItems={setWishlistItems}
+      onBack={() => setView('home1')}
+    />
   );
 }
