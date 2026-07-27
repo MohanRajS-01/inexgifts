@@ -1,0 +1,121 @@
+.order-progress-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+  margin: 0.5rem 0;
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.step-icon-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid #d1d5db;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.step-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Completed and Active States */
+.step-node.completed .step-icon-wrapper,
+.step-node.active .step-icon-wrapper {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+
+.step-label-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0.5rem;
+  text-align: center;
+  width: 75px;
+}
+
+.step-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.step-node.completed .step-name,
+.step-node.active .step-name {
+  color: #374151;
+}
+
+.step-date {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+
+.step-node.completed .step-date,
+.step-node.active .step-date {
+  color: #6b7280;
+}
+
+/* Stepper Connector Lines */
+.step-line {
+  flex-grow: 1;
+  height: 2px;
+  border-top: 2px dashed #e5e7eb;
+  position: relative;
+  top: -19px; /* Align vertically with the center of 28px icons (which is 14px from top, plus margin calculation) */
+  margin: 0 -12px; /* Pull lines closer to icons */
+  z-index: 1;
+}
+
+.step-line.completed {
+  border-top: 2px dashed var(--primary-color);
+}
+
+@media (max-width: 1024px) {
+  .order-progress-stepper {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .step-label-group {
+    width: 60px;
+  }
+  .step-name {
+    font-size: 0.65rem;
+  }
+  .step-date {
+    font-size: 0.6rem;
+  }
+  .step-icon-wrapper {
+    width: 24px;
+    height: 24px;
+  }
+  .step-icon {
+    width: 11px;
+    height: 11px;
+  }
+  .step-line {
+    top: -16px;
+  }
+}

@@ -1,0 +1,95 @@
+.tracking-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f5f4ff 0%, #f0efff 100%);
+  border: 1px solid #e0dfff;
+  border-radius: 16px;
+  padding: 1.25rem 2rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.banner-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e0dfff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.banner-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.banner-subheading {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.15rem;
+}
+
+.banner-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: #ffffff;
+  border: 1.5px solid var(--primary-color);
+  color: var(--primary-color);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.banner-btn:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.btn-arrow {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5px;
+}
+
+@media (max-width: 768px) {
+  .tracking-banner {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .tracking-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+  
+  .banner-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
