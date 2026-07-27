@@ -1,0 +1,86 @@
+/* ── Scrollbars hiding utilities ── */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Category horizontal scroll container */
+.category-scroll-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom fade-in animations for dropdowns */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hover effects for category cards */
+.category-scroll-container button:hover img {
+  transform: scale(1.04);
+}
+
+.category-scroll-container button img {
+  transition: transform 0.3s ease;
+}
+
+/* Custom card shadow styling */
+.gift-product-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.01);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.gift-product-card:hover {
+  box-shadow: 0 12px 24px rgba(91, 62, 224, 0.08), 0 4px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* Custom font styling (fallback) */
+.font-alt {
+  font-family: var(--font-alt), 'Outfit', sans-serif;
+}
+
+/* Specific styling for the sticky header to prevent conflicts */
+.mobile-gift-header {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* Transition for heart click animations */
+button svg {
+  transition: transform 0.15s ease-out, fill 0.15s ease-out, stroke 0.15s ease-out;
+}
+button:active svg {
+  transform: scale(0.85);
+}
+
+/* Scale adjustments for custom banner */
+.customize-promo-banner {
+  background-image: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.customize-promo-banner::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(91, 62, 224, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
