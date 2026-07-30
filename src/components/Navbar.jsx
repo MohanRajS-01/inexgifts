@@ -1,4 +1,4 @@
-import { FiSearch, FiHeart, FiBell, FiShoppingCart, FiMenu, FiX } from 'react-icons/fi';
+import { FiSearch, FiHeart, FiBell, FiShoppingCart, FiMenu, FiX, FiGift } from 'react-icons/fi';
 import { useState } from 'react';
 
 const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
@@ -8,7 +8,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
     <nav className="bg-white border-b sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 md:h-20 items-center">
-          
+
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <span className="text-xl font-bold text-primary tracking-tight">
@@ -32,7 +32,13 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
 
           {/* Right side icons */}
           <div className="hidden md:flex items-center space-x-6">
-            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-primary transition-colors relative">
+              <div className="relative">
+                <FiGift className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] mt-1 font-medium">Gifts</span>
+            </button>
+            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-primary transition-colors relative">
               <div className="relative">
                 <FiHeart className="h-6 w-6" />
                 {wishlistCount > 0 && (
@@ -41,14 +47,14 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
               </div>
               <span className="text-[10px] mt-1 font-medium">Wishlist</span>
             </button>
-            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-primary transition-colors relative">
               <div className="relative">
                 <FiBell className="h-6 w-6" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-pink-500 text-[10px] text-white">2</span>
               </div>
               <span className="text-[10px] mt-1 font-medium">Notifications</span>
             </button>
-            <button className="flex flex-col items-center text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-primary transition-colors relative">
               <div className="relative">
                 <FiShoppingCart className="h-6 w-6" />
                 {cartCount > 0 && (
@@ -100,7 +106,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t">
           <div className="px-4 pt-4 pb-3 space-y-1">
-             <div className="relative w-full mb-4">
+            <div className="relative w-full mb-4">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiSearch className="h-5 w-5 text-gray-400" />
               </div>
