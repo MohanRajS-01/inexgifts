@@ -3,7 +3,7 @@ import {
   FiSearch, FiHeart, FiShoppingBag, FiUser, FiChevronRight, FiChevronLeft,
   FiUploadCloud, FiType, FiCalendar, FiEye, FiCheckCircle, FiShield,
   FiTruck, FiHeadphones, FiAward, FiMenu, FiX, FiArrowRight, FiInstagram,
-  FiGift, FiFacebook
+  FiGift, FiFacebook, FiShoppingCart
 } from "react-icons/fi";
 import { FaWhatsapp, FaHeart, FaStar, FaQuoteLeft } from "react-icons/fa";
 import "./HomeScreen2.css";
@@ -383,81 +383,84 @@ export default function HomeScreen2({
       )}
 
       {/* HERO BANNER SECTION (Autoplay Slider) */}
-      <section className="relative w-full max-w-[1600px] mx-auto px-4 md:px-8 py-6">
-        <div className="relative rounded-3xl overflow-hidden shadow-premium bg-slate-100 min-h-[460px] md:min-h-[520px] flex items-center">
+      <section className="relative w-full max-w-[1600px] mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-4 md:py-6">
+        <div className="hero-banner-card relative rounded-2xl md:rounded-3xl overflow-hidden shadow-premium bg-slate-100 flex items-center">
           {bannerSlides.map((slide, idx) => (
             <div
               key={idx}
-              className={`absolute inset-0 w-full h-full flex flex-col md:flex-row items-center justify-between p-6 md:p-16 bg-gradient-to-r ${slide.bgColor} transition-opacity duration-1000 ${
-                idx === currentSlide ? "opacity-100 z-10 scale-100" : "opacity-0 -z-10 scale-105"
+              className={`hero-slide-container absolute inset-0 w-full h-full flex flex-row items-center justify-between p-3 sm:p-8 md:p-16 bg-gradient-to-r ${slide.bgColor} transition-opacity duration-1000 ${
+                idx === currentSlide ? "opacity-100 z-10 scale-100 active-slide" : "opacity-0 -z-10 scale-105"
               }`}
             >
-              {/* Slide Content */}
-              <div className="flex-1 max-w-xl text-center md:text-left z-10 mt-6 md:mt-0 flex flex-col items-center md:items-start">
-                <span className="text-xs font-extrabold uppercase tracking-[0.25em] text-pink-600 mb-3 bg-pink-100/50 px-3 py-1 rounded-full w-max">
+              {/* Slide Content (Left Column) */}
+              <div className="hero-slide-text flex-1 max-w-xl text-left z-10 flex flex-col items-start">
+                <span className="hero-badge text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.25em] text-pink-600 mb-1.5 sm:mb-3 bg-pink-100/50 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full w-max">
                   {slide.tagline}
                 </span>
-                <h1 className={`text-3xl md:text-6xl font-extrabold tracking-tight ${slide.textColor} leading-[1.1] mb-4`}>
+                <h1 className={`hero-title text-base sm:text-4xl md:text-6xl font-extrabold tracking-tight ${slide.textColor} leading-[1.15] mb-1 sm:mb-4 text-left`}>
                   {slide.title.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="font-cursive text-pink-600 font-normal text-4xl md:text-7xl block md:inline md:ml-1 leading-none">
+                  <span className="font-cursive text-pink-600 font-normal text-lg sm:text-5xl md:text-7xl inline md:ml-1 leading-none">
                     {slide.title.split(" ").slice(-2).join(" ")}
                   </span>
                 </h1>
-                <p className="text-slate-600 text-sm md:text-lg mb-8 font-medium leading-relaxed max-w-md">
+                <p className="hero-subtitle text-slate-600 text-[11px] sm:text-base md:text-lg mb-2 sm:mb-8 font-medium leading-tight sm:leading-relaxed max-w-md text-left">
                   {slide.subtitle}
                 </p>
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                <div className="hero-slide-buttons flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-4 w-auto">
                   <a
                     href="#best-sellers"
-                    className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-sm tracking-wider uppercase py-3.5 px-8 rounded-full shadow-glow hover:shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2 group"
+                    className="hero-btn-primary bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-[9px] sm:text-sm tracking-wider uppercase py-1.5 sm:py-3.5 px-3 sm:px-8 rounded-full shadow-glow hover:shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-1 group"
                   >
                     <span>Customize Now</span>
-                    <FiChevronRight className="h-4.5 w-4.5 group-hover:translate-x-1 transition-transform" />
+                    <FiChevronRight className="h-3 w-3 sm:h-4.5 sm:w-4.5 group-hover:translate-x-1 transition-transform" />
                   </a>
                   <a
                     href="#occasions"
-                    className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-sm tracking-wider uppercase py-3.5 px-8 rounded-full transition-all text-center"
+                    className="hero-btn-secondary bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-[9px] sm:text-sm tracking-wider uppercase py-1.5 sm:py-3.5 px-3 sm:px-8 rounded-full transition-all text-center flex items-center justify-center"
                   >
                     View Occasions
                   </a>
                 </div>
               </div>
 
-              {/* Slide Image */}
-              <div className="flex-1 w-full max-w-[280px] md:max-w-[420px] aspect-square flex items-center justify-center relative z-10 mt-4 md:mt-0">
-                <div className="absolute inset-0 bg-white/20 blur-3xl rounded-full scale-95"></div>
+              {/* Slide Image (Right Column) */}
+              <div className="hero-slide-image-wrapper flex-1 w-full max-w-[200px] sm:max-w-[280px] md:max-w-[420px] aspect-square flex items-center justify-center relative z-10">
+                <div className="hero-slide-img-glow absolute inset-0 bg-white/20 blur-3xl rounded-full scale-95"></div>
                 <img
                   src={slide.image}
                   alt={slide.title}
-                  className="w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.12)] animate-float"
+                  className="hero-slide-img w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.12)] animate-float"
                 />
               </div>
             </div>
           ))}
 
-          {/* Slider Arrows */}
+          {/* Slider Arrows (Vertically centered) */}
           <button
             onClick={() => setCurrentSlide((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length)}
-            className="absolute left-4 md:left-6 z-25 h-10 w-10 md:h-12 md:w-12 bg-white/70 hover:bg-white backdrop-blur-md rounded-full shadow-md flex items-center justify-center text-slate-800 transition-all hover:scale-105"
+            className="hero-arrow-btn absolute left-1 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 z-25 h-6 w-6 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur-md rounded-full shadow-md flex items-center justify-center text-slate-800 transition-all hover:scale-105"
+            aria-label="Previous slide"
           >
-            <FiChevronLeft className="h-5 w-5" />
+            <FiChevronLeft className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
           </button>
           <button
             onClick={() => setCurrentSlide((prev) => (prev + 1) % bannerSlides.length)}
-            className="absolute right-4 md:right-6 z-25 h-10 w-10 md:h-12 md:w-12 bg-white/70 hover:bg-white backdrop-blur-md rounded-full shadow-md flex items-center justify-center text-slate-800 transition-all hover:scale-105"
+            className="hero-arrow-btn absolute right-1 sm:right-4 md:right-6 top-1/2 -translate-y-1/2 z-25 h-6 w-6 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur-md rounded-full shadow-md flex items-center justify-center text-slate-800 transition-all hover:scale-105"
+            aria-label="Next slide"
           >
-            <FiChevronRight className="h-5 w-5" />
+            <FiChevronRight className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
           </button>
 
-          {/* Slider Dots */}
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 z-25">
+          {/* Slider Dots (Bottom center inside hero card) */}
+          <div className="hero-slider-dots absolute bottom-2 sm:bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-1.5 sm:space-x-2 z-25">
             {bannerSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? "w-7 bg-violet-600" : "w-2.5 bg-slate-400/60 hover:bg-slate-400"
+                className={`h-1.5 sm:h-2.5 rounded-full transition-all duration-300 ${
+                  idx === currentSlide ? "w-4 sm:w-7 bg-violet-600" : "w-1.5 sm:w-2.5 bg-slate-400/60 hover:bg-slate-400"
                 }`}
+                aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
           </div>
@@ -586,20 +589,21 @@ export default function HomeScreen2({
                   </div>
 
                   {/* Pricing and Cart */}
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 line-through leading-none mb-0.5 font-semibold">
+                  <div className="flex items-center justify-between gap-1.5 mt-auto pt-2 border-t border-slate-50">
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-slate-400 line-through leading-none mb-0.5 font-semibold truncate">
                         ₹{product.originalPrice}
                       </span>
-                      <span className="text-[15px] font-extrabold text-slate-900 leading-none">
+                      <span className="text-[15px] font-extrabold text-slate-900 leading-none truncate">
                         ₹{product.price}
                       </span>
                     </div>
                     <button
                       onClick={(e) => handleAddToCart(e, product.title)}
-                      className="h-8.5 w-8.5 bg-violet-600 text-white rounded-full hover:bg-pink-600 flex items-center justify-center transition-colors shadow-glow hover:shadow-glow-pink"
+                      className="cart-add-btn"
+                      aria-label={`Add ${product.title} to cart`}
                     >
-                      <FiShoppingBag className="h-4 w-4" />
+                      <FiShoppingCart className="h-4 w-4 text-white" />
                     </button>
                   </div>
                 </div>
