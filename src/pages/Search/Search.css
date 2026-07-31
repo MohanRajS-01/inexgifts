@@ -609,7 +609,6 @@
   padding: 10px 12px 10px 2px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .product-title {
@@ -748,7 +747,8 @@
   letter-spacing: 0.02em;
   width: 100%;
   justify-content: center;
-  margin-top: 2px;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .add-to-cart-btn:hover {
@@ -1522,7 +1522,7 @@
   /* Vertical Card style for Desktop */
   .product-card {
     flex-direction: column;
-    height: 100%;
+    height: 375px;
     border-radius: 16px;
   }
 
@@ -1543,7 +1543,7 @@
 
   .product-title {
     font-size: 14px;
-    height: auto;
+    height: 40px; /* Force uniform height for titles */
     margin-bottom: 2px;
   }
 
@@ -1558,9 +1558,12 @@
 
   .add-to-cart-btn {
     width: 100%;
+    height: 32px;
+    font-size: 12px;
     justify-content: center;
-    padding: 8px 12px;
-    margin-top: 2px;
+    padding: 0 10px;
+    margin-top: auto;
+    flex-shrink: 0;
   }
 
   .more-like-btn {

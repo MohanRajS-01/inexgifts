@@ -1584,7 +1584,9 @@ export function SearchScreen({
             <h1 className="results-heading">
               Results for {searchQuery
                 ? <span className="highlight-query">"{searchQuery}"</span>
-                : 'All Products'}
+                : activeCategory !== 'all'
+                  ? categoriesData.find(c => c.id === activeCategory)?.label || 'All Products'
+                  : 'All Products'}
             </h1>
             <p className="results-count">{filteredProducts.length} products found</p>
           </div>
