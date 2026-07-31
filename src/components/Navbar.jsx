@@ -38,7 +38,7 @@ const Navbar = ({ cartCount = 0, wishlistCount = 0 }) => {
               </div>
               <span className="text-[10px] mt-1 font-medium">Gifts</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-primary transition-colors relative">
+            <button className="flex flex-col items-center justify-center w-[72px] text-gray-500 hover:text-prichmary transition-colors relative">
               <div className="relative">
                 <FiHeart className="h-6 w-6" />
                 {wishlistCount > 0 && (
