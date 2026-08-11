@@ -82,18 +82,37 @@ const trendingProducts = [
   },
 ];
 
-const bannerImages = [
-  '/Banner1.png',
-  '/Banner2.png',
-  '/Banner3.png',
-  '/Banner4.png'
-];
+import { bannerService } from '../../services/bannerService';
+import { productService } from '../../services/productService';
 
 const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, setSelectedCategory }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
   const [searchVal, setSearchVal] = useState("");
+  const [banners, setBanners] = useState(() => bannerService.getBanners());
+  const [storeProducts, setStoreProducts] = useState([]);
+
+  useEffect(() => {
+    const unsubBanners = bannerService.subscribeBanners((latestBanners) => {
+      if (latestBanners && latestBanners.length > 0) {
+        setBanners(latestBanners);
+      }
+    });
+
+    const unsubProducts = productService.subscribeProducts((latestProducts) => {
+      if (latestProducts && latestProducts.length > 0) {
+        setStoreProducts(latestProducts);
+      } else {
+        setStoreProducts([]);
+      }
+    });
+
+    return () => {
+      if (unsubBanners) unsubBanners();
+      if (unsubProducts) unsubProducts();
+    };
+  }, []);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -124,11 +143,14 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
   };
 
   useEffect(() => {
+    if (!banners.length) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % bannerImages.length);
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [banners]);
+
+  const activeBanner = banners[currentSlide] || banners[0] || {};
 
   return (
     <>
@@ -161,35 +183,39 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
           <div className="lg:col-span-3 rounded-2xl overflow-hidden relative flex flex-col justify-center p-5 md:p-12 h-[200px] sm:h-[300px] md:h-full md:min-h-[400px]">
 
             {/* Background Slider */}
-            {bannerImages.map((img, idx) => (
+            {banners.map((b, idx) => (
               <div
-                key={idx}
+                key={b.id || idx}
                 className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'
                   }`}
               >
-                <img src={img} alt={`Banner ${idx + 1}`} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-white/80 via-white/40 to-transparent"></div>
+                <img src={b.image || '/Banner1.png'} alt={b.title || `Banner ${idx + 1}`} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/50 to-transparent"></div>
               </div>
             ))}
 
             {/* Foreground Content */}
-            <div className="relative z-10 w-[60%] sm:w-[50%] md:w-2/3 lg:w-1/2">
+            <div className="relative z-10 w-[65%] sm:w-[55%] md:w-2/3 lg:w-1/2">
               <h1 className="text-[15px] sm:text-xl md:text-5xl font-bold text-gray-900 mb-0.5 md:mb-2 tracking-tight leading-tight">
-                Make Every Moment<br />
-                <span className="font-cursive text-secondary text-[22px] sm:text-3xl md:text-7xl font-normal leading-tight">Extra Special</span>
+                {activeBanner.title || 'Make Every Moment'}<br />
+                <span className="font-cursive text-secondary text-[22px] sm:text-3xl md:text-7xl font-normal leading-tight">
+                  {activeBanner.subtitle || 'Extra Special'}
+                </span>
               </h1>
               <div className="font-alt text-gray-800 mt-1 md:mt-4 mb-2 md:mb-8 max-w-[170px] sm:max-w-[200px] md:max-w-md text-[11px] sm:text-sm md:text-xl font-medium">
-                <p className="mb-0.5 md:mb-1.5">Unique gifts for your special ones.</p>
-                <p>Thoughtful. Personal. Memorable.</p>
+                <p className="mb-0.5 md:mb-1.5">{activeBanner.desc || 'Unique gifts for your special ones.'}</p>
               </div>
-              <button className="bg-primary hover:bg-opacity-90 text-white font-medium mt-4 md:mt-0 py-1.5 px-4 md:py-3 md:px-8 rounded-full text-xs md:text-base shadow-lg shadow-primary/30 transition-all flex items-center group w-max">
+              <button 
+                onClick={() => setView && setView('gift')}
+                className="bg-primary hover:bg-opacity-90 text-white font-medium mt-4 md:mt-0 py-1.5 px-4 md:py-3 md:px-8 rounded-full text-xs md:text-base shadow-lg shadow-primary/30 transition-all flex items-center group w-max"
+              >
                 Shop Now <FiChevronRight className="ml-1 md:ml-2 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
 
             {/* Slider Dots */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
-              {bannerImages.map((_, idx) => (
+              {banners.map((_, idx) => (
                 <button
                   key={idx}
                   className={`h-2 rounded-full transition-all ${idx === currentSlide ? 'w-6 bg-primary' : 'w-2 bg-gray-400 hover:bg-gray-500'
@@ -276,16 +302,29 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
             </div>
 
             <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2 hide-scrollbar snap-x items-start">
-              {trendingProducts.map((product) => (
+              {(storeProducts.length > 0 ? storeProducts.map(p => ({
+                id: p.id,
+                title: p.title,
+                price: p.currentPrice || p.price,
+                originalPrice: p.originalPrice,
+                rating: `${p.rating || 4.8} (${p.reviewsCount || 12})`,
+                image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+                inStock: p.inStock !== false,
+                deliveryText: p.deliveryText || 'Get it in 2-3 Days'
+              })) : trendingProducts).map((product) => (
                 <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="w-[calc(50%-6px)] sm:w-[200px] lg:w-[calc((100%-3rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
                   <div className="relative rounded-xl overflow-hidden mb-3 aspect-[4/3] bg-gray-100 w-full">
                     <img src={product.image} alt={product.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
 
-                    {product.badge && (
+                    {product.inStock === false ? (
+                      <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-600 text-white text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md shadow">
+                        Out of Stock
+                      </span>
+                    ) : product.badge ? (
                       <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-pink-500 text-white text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md">
                         {product.badge}
                       </span>
-                    )}
+                    ) : null}
                     <button onClick={(e) => handleWishlistClick(e, product.id)} className="absolute top-2 right-2 sm:top-3 sm:right-3 h-6 w-6 sm:h-8 sm:w-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-500 hover:text-secondary hover:bg-white transition-colors">
                       {wishlistItems[product.id] ? (
                         <FaHeart className="h-3 w-3 sm:h-4 sm:w-4 text-secondary" />
@@ -296,9 +335,12 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
                   </div>
                   <div className="flex-1 flex flex-col">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-0.5 sm:mb-1 truncate">{product.title}</h3>
-                    <div className="flex items-center mb-1 sm:mb-2">
-                      <span className="text-yellow-400 text-[10px] sm:text-xs">★</span>
-                      <span className="text-[9px] sm:text-xs text-gray-500 ml-1">{product.rating}</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                      <div className="flex items-center">
+                        <span className="text-yellow-400 text-[10px] sm:text-xs">★</span>
+                        <span className="text-[9px] sm:text-xs text-gray-500 ml-1">{product.rating}</span>
+                      </div>
+                      <span className="text-[9px] text-emerald-600 font-semibold truncate">🚚 {product.deliveryText || '2-3 Days'}</span>
                     </div>
                     <div className="flex items-center justify-between mt-auto pt-1 sm:pt-2">
                       <div className="flex flex-row items-baseline gap-1 flex-wrap">
@@ -307,9 +349,15 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
                           <span className="text-[9px] sm:text-xs text-gray-400 line-through leading-none">₹{product.originalPrice}</span>
                         )}
                       </div>
-                      <button onClick={(e) => handleAddToCartClick(e, product)} className="h-7 w-7 sm:h-9 sm:w-9 bg-primary text-white hover:bg-opacity-90 rounded-full flex items-center justify-center transition-colors shadow-md shadow-primary/20">
-                        <FiShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </button>
+                      {product.inStock === false ? (
+                        <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                          Out of Stock
+                        </span>
+                      ) : (
+                        <button onClick={(e) => handleAddToCartClick(e, product)} className="h-7 w-7 sm:h-9 sm:w-9 bg-primary text-white hover:bg-opacity-90 rounded-full flex items-center justify-center transition-colors shadow-md shadow-primary/20">
+                          <FiShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

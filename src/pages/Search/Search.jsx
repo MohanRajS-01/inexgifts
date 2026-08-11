@@ -23,36 +23,17 @@ export default function Search({
   };
 
   return (
-    <div className="device-frame">
-      <div className="device-screen">
-        <Header
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          clearSearch={() => { setSearchQuery(''); setActiveCategory('all'); }}
-          cartCount={cartCount}
-          activeNav="search"
-          setActiveNav={(nav) => {
-            if (nav === 'home') {
-              setView('home1');
-            } else {
-              setView(nav);
-            }
-          }}
-        />
-
-        <main className="scrollable-content">
-          <SearchScreen
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            wishlistItems={wishlistItems}
-            toggleWishlist={toggleWishlist}
-            addToCart={onAddToCart}
-            onOpenProduct={onOpenProduct}
-          />
-        </main>
-      </div>
+    <div className="w-full min-h-screen bg-slate-50 font-sans py-4 px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto pb-20">
+      <SearchScreen
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        wishlistItems={wishlistItems}
+        toggleWishlist={toggleWishlist}
+        addToCart={onAddToCart}
+        onOpenProduct={onOpenProduct}
+      />
     </div>
   );
 }

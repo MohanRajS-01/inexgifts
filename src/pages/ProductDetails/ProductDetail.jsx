@@ -87,31 +87,81 @@ function ProductVisuals({ product, showToast }) {
   );
 }
 
-function ProductInfo({ product }) {
+function ProductInfo({ product, qty = 1, setQty, onAddToCart }) {
+  const isOutOfStock = product?.inStock === false;
+
   return (
     <div className="product-info-section">
-      <h2 className="product-title">{product?.title || 'LED Photo Lamp'}</h2>
-      <p className="product-subtitle">Personalized with 1 Photo</p>
+      <div className="flex items-center gap-3">
+        <h2 className="product-title m-0">{product?.title || 'LED Photo Lamp'}</h2>
+        {isOutOfStock && (
+          <span className="bg-red-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+            Out of Stock
+          </span>
+        )}
+      </div>
+      <p className="product-subtitle">{product?.subtitle || 'Personalized Gift'}</p>
 
       <div className="rating">
         <Star className="star-filled" />
-        <span className="rating-score">4.8</span>
-        <a href="#" className="rating-reviews">(320 reviews)</a>
+        <span className="rating-score">{product?.rating || 4.8}</span>
+        <span className="rating-reviews">({product?.reviewsCount || 320} reviews)</span>
       </div>
 
       <div className="pricing">
-        <span className="price-current">₹{product?.price || '999'}</span>
-        {product?.discount && <span className="price-tag">{product.discount}</span>}
+        <span className="price-current">₹{product?.price || product?.currentPrice || '999'}</span>
+        {product?.discount && <span className="price-tag">{product.discount}% OFF</span>}
         {product?.originalPrice && <span className="price-original">₹{product.originalPrice}</span>}
       </div>
-      <p className="tax-info">Inclusive of all taxes</p>
+      <p className="tax-info">Inclusive of all taxes & free delivery</p>
+
+      {/* Direct Desktop Add to Cart Box / Out of Stock */}
+      <div className="my-4 p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex flex-wrap items-center gap-3">
+        {setQty && !isOutOfStock && (
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => qty > 1 && setQty(qty - 1)}
+              className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold transition"
+            >
+              -
+            </button>
+            <span className="px-3 py-2 font-bold text-slate-800 text-sm min-w-[28px] text-center">{qty}</span>
+            <button
+              type="button"
+              onClick={() => setQty(qty + 1)}
+              className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold transition"
+            >
+              +
+            </button>
+          </div>
+        )}
+
+        {isOutOfStock ? (
+          <button
+            type="button"
+            disabled
+            className="flex-1 min-w-[160px] bg-slate-300 text-slate-600 font-extrabold py-3 px-6 rounded-xl cursor-not-allowed text-sm border border-slate-300"
+          >
+            🚫 Currently Out of Stock
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAddToCart && onAddToCart(qty)}
+            className="flex-1 min-w-[160px] bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold py-3 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-sm"
+          >
+            <ShoppingCart size={18} /> Add to Cart
+          </button>
+        )}
+      </div>
 
       <div className="features-list">
         <div className="feature-item">
           <Truck className="text-green icon-lg" />
           <div className="feature-text">
-            <span className="feature-title">Free Delivery</span>
-            <span className="feature-desc">Get it by Sat, 24 May</span>
+            <span className="feature-title">Expected Delivery</span>
+            <span className="feature-desc font-bold text-indigo-700">{product?.deliveryText || 'Get it in 2-3 Business Days'}</span>
           </div>
         </div>
         <div className="feature-item">
@@ -293,30 +343,39 @@ function CustomizationSection({ showToast }) {
 }
 
 function BottomBar({ product, qty, setQty, onAddToCart }) {
+  const isOutOfStock = product?.inStock === false;
+
   return (
     <div className="bottom-bar">
       <div className="bottom-bar-inner">
         <div className="bottom-price">
-          <span className="price-current">₹{product?.price || '999'}</span>
+          <span className="price-current">₹{product?.price || product?.currentPrice || '999'}</span>
           {product?.originalPrice && <span className="price-original">₹{product.originalPrice}</span>}
-          {product?.discount && <span className="price-tag-text">{product.discount}</span>}
         </div>
 
         <div className="bottom-actions">
-          <div className="quantity-selector">
-            <button className="qty-btn" aria-label="Decrease Quantity" onClick={() => qty > 1 && setQty(qty - 1)}>
-              <Minus className="icon-sm" />
-            </button>
-            <span className="qty-value">{qty}</span>
-            <button className="qty-btn" aria-label="Increase Quantity" onClick={() => qty < 99 && setQty(qty + 1)}>
-              <Plus className="icon-sm" />
-            </button>
-          </div>
+          {!isOutOfStock && (
+            <div className="quantity-selector">
+              <button className="qty-btn" aria-label="Decrease Quantity" onClick={() => qty > 1 && setQty(qty - 1)}>
+                <Minus className="icon-sm" />
+              </button>
+              <span className="qty-value">{qty}</span>
+              <button className="qty-btn" aria-label="Increase Quantity" onClick={() => qty < 99 && setQty(qty + 1)}>
+                <Plus className="icon-sm" />
+              </button>
+            </div>
+          )}
 
-          <button className="add-to-cart-btn" onClick={() => onAddToCart(qty)}>
-            <ShoppingCart className="icon-sm" />
-            Add to Cart
-          </button>
+          {isOutOfStock ? (
+            <button disabled className="add-to-cart-btn bg-slate-300 text-slate-600 cursor-not-allowed border-none font-bold">
+              Out of Stock
+            </button>
+          ) : (
+            <button className="add-to-cart-btn" onClick={() => onAddToCart(qty)}>
+              <ShoppingCart className="icon-sm" />
+              Add to Cart
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -329,7 +388,7 @@ function ProductDetail({ product, showToast, qty, setQty, onAddToCart, hideBotto
       <main className="product-detail-one-main">
         <ProductVisuals product={product} showToast={showToast} />
         <div className="product-details-container">
-          <ProductInfo product={product} />
+          <ProductInfo product={product} qty={qty} setQty={setQty} onAddToCart={onAddToCart} />
           <hr className="divider" />
           <CustomizationSection showToast={showToast} />
         </div>

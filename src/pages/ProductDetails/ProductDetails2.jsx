@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Heart,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import '../../style.css';
 import ProductDetail from './ProductDetail';
+import { reviewService } from '../../services/reviewService';
 
 const tabs = [
   { id: 'features-section', label: 'Features' },
@@ -165,6 +166,36 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
   const [currentSlide, setCurrentSlide] = useState(0);
   const [similarWishlist, setSimilarWishlist] = useState(similarProducts.map(() => false));
   const [addedFeedback, setAddedFeedback] = useState(false);
+
+  // Firestore Customer Reviews
+  const [firestoreReviews, setFirestoreReviews] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchReviews = async () => {
+      const pId = product?.id || 'prod_1';
+      const pTitle = product?.title || '';
+      const data = await reviewService.getProductReviews(pId, pTitle);
+      if (isMounted) setFirestoreReviews(data);
+    };
+    fetchReviews();
+    return () => { isMounted = false; };
+  }, [product]);
+
+  const displayReviewSlides = useMemo(() => {
+    if (firestoreReviews.length > 0) {
+      const formattedFirestore = firestoreReviews.map((r) => ({
+        initial: r.userName ? r.userName.charAt(0).toUpperCase() : 'U',
+        name: r.userName || 'Verified Buyer',
+        date: r.date || 'Recently',
+        text: r.comment,
+        rating: r.rating || 5,
+        photo: r.productImage || product?.image || '/assets/lamp_portrait.png',
+      }));
+      return [...formattedFirestore, ...reviewSlides];
+    }
+    return reviewSlides;
+  }, [firestoreReviews, product]);
 
   const sectionRefs = useRef({});
   const tabRefs = useRef({});
@@ -445,8 +476,8 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
 
           <div className="review-slideshow" id="review-slideshow">
             <div className="review-slide-wrapper" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-              {reviewSlides.map((review) => (
-                <div className="review-slide" key={review.name}>
+              {displayReviewSlides.map((review, idx) => (
+                <div className="review-slide" key={review.name + idx}>
                   <div className="review-card">
                     <div className="review-card-header">
                       <div className="reviewer-info">
@@ -461,7 +492,11 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
                           <div className="review-stars-row">
                             <div className="review-stars">
                               {[...Array(5)].map((_, index) => (
-                                <Star key={index} className="star-filled" size={14} />
+                                <Star
+                                  key={index}
+                                  className={index < (review.rating || 5) ? 'star-filled' : 'text-slate-300'}
+                                  size={14}
+                                />
                               ))}
                             </div>
                           </div>
@@ -471,26 +506,28 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
                     </div>
                     <div className="review-body">
                       <p className="review-text">{review.text}</p>
-                      <img
-                        src={review.photo}
-                        alt={`${review.name}'s review photo`}
-                        className="review-thumb-img"
-                        onClick={() => openLightbox(review.photo, `${review.name} review photo`)}
-                      />
+                      {review.photo && (
+                        <img
+                          src={review.photo}
+                          alt={`${review.name}'s review photo`}
+                          className="review-thumb-img"
+                          onClick={() => openLightbox(review.photo, `${review.name} review photo`)}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <button className="slide-arrow slide-arrow-prev" type="button" id="slide-prev" aria-label="Previous review" onClick={() => setCurrentSlide((prev) => (prev - 1 + reviewSlides.length) % reviewSlides.length)}>
+            <button className="slide-arrow slide-arrow-prev" type="button" id="slide-prev" aria-label="Previous review" onClick={() => setCurrentSlide((prev) => (prev - 1 + displayReviewSlides.length) % displayReviewSlides.length)}>
               <ChevronLeft size={16} />
             </button>
-            <button className="slide-arrow slide-arrow-next" type="button" id="slide-next" aria-label="Next review" onClick={() => setCurrentSlide((prev) => (prev + 1) % reviewSlides.length)}>
+            <button className="slide-arrow slide-arrow-next" type="button" id="slide-next" aria-label="Next review" onClick={() => setCurrentSlide((prev) => (prev + 1) % displayReviewSlides.length)}>
               <ChevronRight size={16} />
             </button>
             <div className="carousel-dots" id="carousel-dots">
-              {reviewSlides.map((_, index) => (
+              {displayReviewSlides.map((_, index) => (
                 <span
                   key={index}
                   className={`dot ${currentSlide === index ? 'active' : ''}`}
@@ -537,29 +574,29 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
         </section>
       </main>
 
-      <footer className="app-footer">
+      <footer className="app-footer sticky bottom-0 z-50 bg-white border-t border-slate-200 shadow-2xl py-3.5 px-4 sm:px-8 flex items-center justify-between gap-4">
         <div className="price-container">
-          <div className="price-row">
-            <span className="price-current">₹999</span>
-            <span className="price-original">₹1,299</span>
-            <span className="price-discount">23% OFF</span>
+          <div className="price-row flex items-baseline gap-2">
+            <span className="price-current text-xl sm:text-2xl font-extrabold text-slate-900">₹{product?.price || product?.currentPrice || '999'}</span>
+            {product?.originalPrice && <span className="price-original text-xs sm:text-sm text-slate-400 line-through">₹{product.originalPrice}</span>}
+            {product?.discount && <span className="price-discount text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded">{product.discount}% OFF</span>}
           </div>
         </div>
-        <div className="footer-actions">
-          <div className="qty-selector">
-            <button className="qty-btn" type="button" aria-label="Decrease quantity" onClick={() => updateQuantity(quantity - 1)}>
+        <div className="footer-actions flex items-center gap-3">
+          <div className="qty-selector flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+            <button className="qty-btn px-3 py-1.5 text-slate-600 font-bold hover:bg-slate-200" type="button" aria-label="Decrease quantity" onClick={() => updateQuantity(quantity - 1)}>
               —
             </button>
-            <span className="qty-value" id="qty-count">
+            <span className="qty-value px-3 font-bold text-slate-800 text-sm" id="qty-count">
               {quantity}
             </span>
-            <button className="qty-btn" type="button" aria-label="Increase quantity" onClick={() => updateQuantity(quantity + 1)}>
+            <button className="qty-btn px-3 py-1.5 text-slate-600 font-bold hover:bg-slate-200" type="button" aria-label="Increase quantity" onClick={() => updateQuantity(quantity + 1)}>
               +
             </button>
           </div>
-          <button className="add-to-cart-btn" type="button" id="add-to-cart-action" onClick={handleAddToCart}>
-            <ShoppingCart className="btn-cart-icon" size={16} />
-            <span>{addedFeedback ? '✓ Added!' : 'Add to Cart'}</span>
+          <button className="add-to-cart-btn bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 text-sm cursor-pointer" type="button" id="add-to-cart-action" onClick={handleAddToCart}>
+            <ShoppingCart className="btn-cart-icon" size={18} />
+            <span>{addedFeedback ? '✓ Added to Cart!' : 'Add to Cart'}</span>
           </button>
         </div>
       </footer>

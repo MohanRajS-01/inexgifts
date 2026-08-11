@@ -12,6 +12,11 @@ import CartPage from "./pages/Cart/CartPage";
 import Wishlist from "./pages/Wishlist/Wishlist";
 import Profile from "./pages/Profile/Profile";
 import Gift from "./pages/Gift/Gift";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import { AuthProvider } from "./context/AuthContext";
+import { initFirestoreDatabase } from "./services/initFirestore";
+
 const DEFAULT_CART = [
   {
     id: 'led_lamp',
@@ -47,7 +52,7 @@ const DEFAULT_WISHLIST = [
   { id: 'keychain', title: 'Personalized Keychain', price: 199, image: '/assets/images/products/photo_keychain.jpg' }
 ];
 
-function App() {
+function AppContent() {
   const [view, setView] = useState('splash');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -74,6 +79,11 @@ function App() {
     }
   });
 
+  // Auto-seed initial Firestore Database collections (users, banners, products, orders)
+  useEffect(() => {
+    initFirestoreDatabase();
+  }, []);
+
   // Save to localStorage on change
   useEffect(() => {
     try {
@@ -95,10 +105,9 @@ function App() {
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const wishlistCount = wishlistItems.length;
 
-  // Add Product to Cart (Handles both full product object and count number)
+  // Add Product to Cart
   const handleAddToCart = (productOrCount, addQuantity = 1) => {
     if (typeof productOrCount === 'number') {
-      // Simple count trigger
       return;
     }
 
@@ -188,6 +197,10 @@ function App() {
         return <SplashScreen onComplete={() => setView('login')} />;
       case 'login':
         return <Login setView={setView} />;
+      case 'admin-login':
+        return <AdminLogin setView={setView} />;
+      case 'admin':
+        return <AdminDashboard setView={setView} />;
       case 'search':
         return (
           <Search
@@ -226,16 +239,16 @@ function App() {
           />
         );
       case 'gift':
-  return (
-    <Gift
-      setView={setView}
-      onAddToCart={handleAddToCart}
-      onAddToWishlist={handleToggleWishlist}
-      onOpenProduct={openProduct}
-      cartCount={cartCount}
-      wishlistCount={wishlistCount}
-    />
-  );
+        return (
+          <Gift
+            setView={setView}
+            onAddToCart={handleAddToCart}
+            onAddToWishlist={handleToggleWishlist}
+            onOpenProduct={openProduct}
+            cartCount={cartCount}
+            wishlistCount={wishlistCount}
+          />
+        );
       case 'cart':
         return (
           <CartPage
@@ -244,14 +257,15 @@ function App() {
             wishlistItems={wishlistItems}
             setWishlistItems={setWishlistItems}
             onBack={() => setView(previousView || 'home1')}
+            setView={setView}
           />
         );
       case 'wishlist':
         return <Wishlist wishlistItems={wishlistItems} setWishlistItems={setWishlistItems} cartItems={cartItems} setCartItems={setCartItems} onAddToCart={handleAddToCart} setView={setView} />;
       case 'orders':
-        return <MyOrder />;
+        return <MyOrder setView={setView} />;
       case 'profile':
-        return <Profile />;
+        return <Profile setView={setView} wishlistCount={wishlistCount} />;
       case 'home1':
       default:
         return (
@@ -267,7 +281,7 @@ function App() {
     }
   };
 
-  const showNav = !['splash', 'login', 'search'].includes(view);
+  const showNav = !['splash', 'login', 'search', 'admin', 'admin-login'].includes(view);
 
   return (
     <div className={
@@ -275,15 +289,15 @@ function App() {
         'w-full min-h-screen bg-gray-50'
     }>
       {showNav && (
-  <div className={view === "gift" ? "hidden md:block" : ""}>
-    <Navbar
-      cartCount={cartCount}
-      wishlistCount={wishlistCount}
-      onSearch={handleSearch}
-      setView={setView}
-    />
-  </div>
-)}
+        <div className={view === "gift" ? "hidden md:block" : ""}>
+          <Navbar
+            cartCount={cartCount}
+            wishlistCount={wishlistCount}
+            onSearch={handleSearch}
+            setView={setView}
+          />
+        </div>
+      )}
       <div className={showNav ? "pb-24 md:pb-0" : ""}>
         {renderView()}
       </div>
@@ -292,4 +306,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

@@ -2,11 +2,11 @@ import React from 'react';
 
 const PriceDetails = ({ cartItems, appliedCoupon }) => {
     const totalCartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const subtotal = cartItems.reduce((sum, item) => sum + item.currentPrice * item.quantity, 0);
-    const originalTotal = cartItems.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0);
-    const productDiscount = originalTotal - subtotal;
-    const couponDiscount = appliedCoupon ? Math.round(subtotal * appliedCoupon.rate / 100) : 0;
-    const deliveryCharge = subtotal >= 999 ? 0 : 49;
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.currentPrice * (item.quantity || 1)), 0);
+    const originalTotal = cartItems.reduce((sum, item) => sum + ((item.originalPrice || item.currentPrice) * (item.quantity || 1)), 0);
+    const productDiscount = Math.max(0, originalTotal - subtotal);
+    const couponDiscount = appliedCoupon ? Math.round(subtotal * (appliedCoupon.rate || appliedCoupon.percent || 0) / 100) : 0;
+    const deliveryCharge = (subtotal >= 999 || cartItems.length === 0) ? 0 : 49;
     const grandTotal = subtotal - couponDiscount + deliveryCharge;
 
     return (

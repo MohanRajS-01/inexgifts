@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FiArrowLeft, 
   FiHeart, 
@@ -16,6 +16,7 @@ import {
   FiX
 } from 'react-icons/fi';
 import { giftsData } from '../../data/gifts';
+import { productService } from '../../services/productService';
 import './Gift.css';
 
 const categories = [
@@ -105,9 +106,41 @@ const [availabilityFilter, setAvailabilityFilter] = useState("all");
     setActiveDropdown(null);
   };
 
+  // Live Firestore Products Subscription
+  const [storeProducts, setStoreProducts] = useState([]);
+
+  useEffect(() => {
+    const unsub = productService.subscribeProducts((latestProducts) => {
+      if (latestProducts && latestProducts.length > 0) {
+        setStoreProducts(latestProducts);
+      } else {
+        setStoreProducts([]);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const allProducts = useMemo(() => {
+    if (storeProducts.length > 0) {
+      const mapped = storeProducts.map(p => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'Gifts',
+        price: p.currentPrice || p.price,
+        originalPrice: p.originalPrice || Math.round((p.currentPrice || 999) * 1.25),
+        rating: p.rating || 4.8,
+        reviewsCount: p.reviewsCount || 12,
+        image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+        inStock: true
+      }));
+      return [...mapped, ...giftsData];
+    }
+    return giftsData;
+  }, [storeProducts]);
+
   // Cumulative filtered & sorted products
   const filteredProducts = useMemo(() => {
-    let result = [...giftsData];
+    let result = [...allProducts];
 
     // 1. Search Query filter (case-insensitive)
     if (activeSearch) {
