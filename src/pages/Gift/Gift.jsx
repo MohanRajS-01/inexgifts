@@ -370,7 +370,15 @@ if (availabilityFilter !== "all") {
                     {cat.icon ? (
                       cat.icon
                     ) : (
-                      <img src={cat.image} alt={cat.name} className="h-full w-full object-cover" />
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=200';
+                        }}
+                        className="h-full w-full object-cover" 
+                      />
                     )}
                   </div>
                   <span className={`text-[11px] sm:text-xs tracking-tight font-bold whitespace-nowrap ${isActive ? 'text-indigo-600' : 'text-slate-600'}`}>
@@ -702,6 +710,10 @@ animate-fade-in
                     <img 
                       src={p.image} 
                       alt={p.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+                      }}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
@@ -788,6 +800,10 @@ animate-fade-in
                     <img 
                       src={p.image} 
                       alt={p.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+                      }}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                     />

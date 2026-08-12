@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Share2, Star, Truck, ShieldCheck, Gift, Eye, Upload, CornerRightDown, Check, Minus, Plus, ShoppingCart, Trees, Box } from 'lucide-react';
+import { Share2, Star, Truck, ShieldCheck, Gift, Eye, Upload, CornerRightDown, Check, Minus, Plus, ShoppingCart, Trees, Box, Zap, X } from 'lucide-react';
 import './ProductDetail.css';
 
 const defaultThumbnails = [
@@ -10,13 +10,35 @@ const defaultThumbnails = [
 ];
 
 function ProductVisuals({ product, showToast }) {
-  const thumbnails = [
-    { id: 1, src: product?.image || '/main-lamp.jpg', alt: product?.title || 'Heart lamp' },
-    ...defaultThumbnails.slice(1)
-  ];
+  // Build dynamic image list strictly from product.images or product.image
+  const imageList = (() => {
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      const valid = product.images.filter(img => typeof img === 'string' && img.trim() !== '');
+      if (valid.length > 0) return valid;
+    }
+    if (product?.image && typeof product.image === 'string' && product.image.trim() !== '') {
+      return [product.image.trim()];
+    }
+    return ['/assets/images/products/led_photo_lamp.jpg'];
+  })();
+
+  const thumbnails = imageList.map((src, index) => ({
+    id: index + 1,
+    src: src,
+    alt: `${product?.title || 'Product'} ${index + 1}`
+  }));
+
   const [activeThumb, setActiveThumb] = useState(thumbnails[0]);
   const [mainOpacity, setMainOpacity] = useState(1);
-  const [currentImg, setCurrentImg] = useState(thumbnails[0].src);
+  const [currentImg, setCurrentImg] = useState(thumbnails[0]?.src);
+
+  // Update currentImg when product changes
+  React.useEffect(() => {
+    if (thumbnails[0]) {
+      setActiveThumb(thumbnails[0]);
+      setCurrentImg(thumbnails[0].src);
+    }
+  }, [product?.id, product?.image, JSON.stringify(product?.images)]);
 
   const handleThumbClick = (thumb) => {
     setActiveThumb(thumb);
@@ -29,8 +51,8 @@ function ProductVisuals({ product, showToast }) {
 
   const handleShare = async () => {
     const shareData = {
-      title: 'LED Photo Lamp',
-      text: 'Check out this personalized LED Photo Lamp.',
+      title: product?.title || 'INEX Gifts Product',
+      text: `Check out ${product?.title || 'this product'} on INEX Gifts.`,
       url: window.location.href,
     };
 
@@ -56,33 +78,44 @@ function ProductVisuals({ product, showToast }) {
     <div className="product-visuals">
       <div className="main-image-container">
         <span className="tag-bestseller">Bestseller</span>
-        <button className="icon-btn share-btn" aria-label="Share" onClick={handleShare}>
-          <Share2 />
+        <button type="button" className="product-share-btn" aria-label="Share product" onClick={handleShare} title="Share Product">
+          <Share2 size={18} />
         </button>
         <img
-          src={currentImg}
-          alt={activeThumb.alt}
+          src={currentImg || '/assets/images/products/led_photo_lamp.jpg'}
+          alt={activeThumb?.alt || product?.title || 'Product'}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=600';
+          }}
           className="main-image"
           style={{ opacity: mainOpacity }}
         />
-        <div className="image-counter">{activeThumb.id}/6</div>
+        {thumbnails.length > 1 && (
+          <div className="image-counter">{activeThumb?.id || 1}/{thumbnails.length}</div>
+        )}
       </div>
 
-      <div className="thumbnail-gallery">
-        {thumbnails.map((thumb) => (
-          <div
-            key={thumb.id}
-            className={`thumbnail ${activeThumb.id === thumb.id ? 'active' : ''}`}
-            onClick={() => handleThumbClick(thumb)}
-          >
-            <img src={thumb.src} alt={thumb.alt} />
-          </div>
-        ))}
-        <div className="thumbnail more-images" onClick={() => handleThumbClick({ id: 5, src: '/thumb4.jpg', alt: 'More' })}>
-          <img src="/thumb4.jpg" alt="Grey thumbnail" />
-          <div className="overlay">+2</div>
+      {thumbnails.length > 1 && (
+        <div className="thumbnail-gallery">
+          {thumbnails.map((thumb) => (
+            <div
+              key={thumb.id}
+              className={`thumbnail ${activeThumb?.id === thumb.id ? 'active' : ''}`}
+              onClick={() => handleThumbClick(thumb)}
+            >
+              <img 
+                src={thumb.src} 
+                alt={thumb.alt}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=200';
+                }}
+              />
+            </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -115,60 +148,68 @@ function ProductInfo({ product, qty = 1, setQty, onAddToCart }) {
       </div>
       <p className="tax-info">Inclusive of all taxes & free delivery</p>
 
-      {/* Direct Desktop Add to Cart Box / Out of Stock */}
-      <div className="my-4 p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex flex-wrap items-center gap-3">
-        {setQty && !isOutOfStock && (
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <button
-              type="button"
-              onClick={() => qty > 1 && setQty(qty - 1)}
-              className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold transition"
-            >
-              -
-            </button>
-            <span className="px-3 py-2 font-bold text-slate-800 text-sm min-w-[28px] text-center">{qty}</span>
-            <button
-              type="button"
-              onClick={() => setQty(qty + 1)}
-              className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold transition"
-            >
-              +
-            </button>
-          </div>
-        )}
+      {/* Seamless Action Section */}
+      <div className="mt-5 mb-6 max-w-lg w-full">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+          {setQty && !isOutOfStock && (
+            <div className="flex items-center h-12 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => qty > 1 && setQty(qty - 1)}
+                className="w-10 h-full flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold transition-colors cursor-pointer select-none"
+                aria-label="Decrease Quantity"
+              >
+                <Minus size={15} />
+              </button>
+              <span className="w-9 h-full flex items-center justify-center font-extrabold text-slate-900 text-sm select-none">
+                {qty}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQty(qty + 1)}
+                className="w-10 h-full flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold transition-colors cursor-pointer select-none"
+                aria-label="Increase Quantity"
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+          )}
 
-        {isOutOfStock ? (
-          <button
-            type="button"
-            disabled
-            className="flex-1 min-w-[160px] bg-slate-300 text-slate-600 font-extrabold py-3 px-6 rounded-xl cursor-not-allowed text-sm border border-slate-300"
-          >
-            🚫 Currently Out of Stock
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onAddToCart && onAddToCart(qty)}
-            className="flex-1 min-w-[160px] bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold py-3 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-sm"
-          >
-            <ShoppingCart size={18} /> Add to Cart
-          </button>
-        )}
+          {isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 h-12 bg-slate-200 text-slate-500 font-extrabold text-xs sm:text-sm rounded-xl cursor-not-allowed border border-slate-300 flex items-center justify-center"
+            >
+              🚫 Currently Out of Stock
+            </button>
+          ) : (
+            <div className="flex-1 flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => onAddToCart && onAddToCart(qty)}
+                className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ShoppingCart size={18} /> Add to Cart
+              </button>
+              <button
+                type="button"
+                onClick={() => onAddToCart && onAddToCart(qty)}
+                className="px-5 h-12 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-pink-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <Zap size={16} /> Buy Now
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="features-list">
+      <div className="features-list mt-8 pt-2">
         <div className="feature-item">
           <Truck className="text-green icon-lg" />
           <div className="feature-text">
             <span className="feature-title">Expected Delivery</span>
             <span className="feature-desc font-bold text-indigo-700">{product?.deliveryText || 'Get it in 2-3 Business Days'}</span>
-          </div>
-        </div>
-        <div className="feature-item">
-          <ShieldCheck className="text-blue icon-lg" />
-          <div className="feature-text">
-            <span className="feature-title">Premium Quality</span>
-            <span className="feature-desc">7 Days Replacement</span>
           </div>
         </div>
         <div className="feature-item">
@@ -183,13 +224,14 @@ function ProductInfo({ product, qty = 1, setQty, onAddToCart }) {
   );
 }
 
-function CustomizationSection({ showToast }) {
+function CustomizationSection({ product, showToast, onAddToCart, qty }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [selectedShape, setSelectedShape] = useState('heart');
   const [selectedColor, setSelectedColor] = useState('warm-white');
   const [selectedBase, setSelectedBase] = useState('wood');
   const [customText, setCustomText] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileUpload = (e) => {
@@ -198,7 +240,7 @@ function CustomizationSection({ showToast }) {
       const reader = new FileReader();
       reader.onload = (event) => {
         setPhotoPreview(event.target.result);
-        showToast('<span style="display:flex;align-items:center;gap:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Photo uploaded successfully!</span>');
+        showToast('<span style="display:flex;align-items:center;gap:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Photo uploaded successfully! Click Preview to see live 3D lamp.</span>');
       };
       reader.readAsDataURL(file);
     } else {
@@ -224,7 +266,7 @@ function CustomizationSection({ showToast }) {
           <h3 className="section-title">Customize Your Lamp</h3>
           <p className="section-subtitle">Make it truly yours ✨</p>
         </div>
-        <button className="preview-btn" onClick={() => showToast('<span style="display:flex;align-items:center;gap:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Generating 3D Preview...</span>')}>
+        <button className="preview-btn" onClick={() => setShowPreviewModal(true)}>
           <Eye className="icon-sm" /> Preview
         </button>
       </div>
@@ -256,8 +298,8 @@ function CustomizationSection({ showToast }) {
           </div>
 
           <div className="upload-example">
-            <span className="example-badge">Example</span>
-            <img src={photoPreview || '/example-photo.jpg'} alt="Upload preview" />
+            <span className="example-badge">{photoPreview ? 'Uploaded ✓' : 'Example'}</span>
+            <img src={photoPreview || product?.image || '/example-photo.jpg'} alt="Upload preview" />
           </div>
         </div>
       </div>
@@ -338,6 +380,119 @@ function CustomizationSection({ showToast }) {
           ))}
         </div>
       </div>
+
+      {/* Interactive 3D Engraved Lamp Preview Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl relative flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowPreviewModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-full transition cursor-pointer"
+              aria-label="Close Preview"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="text-white font-extrabold text-lg mb-1 flex items-center gap-2">
+              ✨ Live 3D Lamp Preview
+            </h3>
+            <p className="text-xs text-slate-400 mb-5">Engraved simulation of your customized photo & choices</p>
+
+            {/* Visual Lamp Preview Stage */}
+            <div className="w-full aspect-square max-w-[260px] bg-slate-950 rounded-2xl p-5 flex flex-col items-center justify-center relative overflow-hidden border border-slate-800/80 shadow-inner">
+              {/* Glow Aura */}
+              <div 
+                className={`absolute inset-4 rounded-full filter blur-2xl opacity-60 transition-all duration-500 ${
+                  selectedColor === 'warm-white' ? 'bg-amber-400' :
+                  selectedColor === 'cool-white' ? 'bg-sky-300' :
+                  'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 animate-pulse'
+                }`}
+              />
+
+              {/* Acrylic Plaque Placed in Shape */}
+              <div className={`relative z-10 w-44 h-44 border-4 border-white/40 overflow-hidden flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                selectedShape === 'heart' ? 'rounded-[40%_40%_50%_50%]' :
+                selectedShape === 'round' ? 'rounded-full' :
+                selectedShape === 'star' ? 'rounded-3xl rotate-45' :
+                'rounded-2xl'
+              } ${
+                selectedColor === 'warm-white' ? 'shadow-amber-400/60' :
+                selectedColor === 'cool-white' ? 'shadow-sky-300/60' :
+                'shadow-pink-500/60'
+              }`}>
+                <img
+                  src={photoPreview || product?.image || '/assets/images/products/led_photo_lamp.jpg'}
+                  alt="Engraved Photo Preview"
+                  className="w-full h-full object-cover filter brightness-110 contrast-125"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-white/10 pointer-events-none" />
+              </div>
+
+              {/* Lamp Base Unit */}
+              <div className={`w-40 h-10 mt-1 rounded-b-xl z-20 flex flex-col items-center justify-center border-t-2 transition-all shadow-xl ${
+                selectedBase === 'wood' 
+                  ? 'bg-amber-900 border-amber-700 text-amber-100' 
+                  : 'bg-slate-100 border-slate-300 text-slate-900'
+              }`}>
+                <div className={`w-32 h-1 rounded-full mb-1 ${
+                  selectedColor === 'warm-white' ? 'bg-amber-300 shadow-[0_0_10px_#fde047]' :
+                  selectedColor === 'cool-white' ? 'bg-sky-300 shadow-[0_0_10px_#7dd3fc]' :
+                  'bg-pink-400 shadow-[0_0_10px_#f472b6]'
+                }`} />
+
+                <span className="text-[10px] font-extrabold tracking-wider uppercase truncate px-2 max-w-full">
+                  {customText || 'INEX GIFTS'}
+                </span>
+              </div>
+            </div>
+
+            {/* Customization Details Summary */}
+            <div className="w-full mt-4 bg-slate-950/70 rounded-xl p-3 border border-slate-800 text-xs text-slate-300 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Photo:</span>
+                <span className="font-bold text-emerald-400">{photoPreview ? 'Custom Photo Uploaded ✓' : 'Default Sample Photo'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Lamp Shape:</span>
+                <span className="font-bold capitalize text-white">{selectedShape}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Light Color:</span>
+                <span className="font-bold capitalize text-white">{selectedColor.replace('-', ' ')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Base Type:</span>
+                <span className="font-bold capitalize text-white">{selectedBase === 'wood' ? 'Wooden Base' : 'White Base'}</span>
+              </div>
+              {customText && (
+                <div className="flex justify-between border-t border-slate-800/80 pt-1 mt-1">
+                  <span className="text-slate-400">Engraved Text:</span>
+                  <span className="font-bold text-amber-300 truncate max-w-[180px]">"{customText}"</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="w-full flex gap-3 mt-4">
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Change Options
+              </button>
+              <button
+                onClick={() => {
+                  setShowPreviewModal(false);
+                  onAddToCart && onAddToCart(qty);
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <ShoppingCart size={15} /> Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -390,7 +545,7 @@ function ProductDetail({ product, showToast, qty, setQty, onAddToCart, hideBotto
         <div className="product-details-container">
           <ProductInfo product={product} qty={qty} setQty={setQty} onAddToCart={onAddToCart} />
           <hr className="divider" />
-          <CustomizationSection showToast={showToast} />
+          <CustomizationSection product={product} showToast={showToast} onAddToCart={onAddToCart} qty={qty} />
         </div>
       </main>
       {!hideBottomBar && <BottomBar product={product} qty={qty} setQty={setQty} onAddToCart={onAddToCart} />}

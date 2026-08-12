@@ -389,6 +389,10 @@ export function ProductCard({ product, addToCart, isWishlisted, toggleWishlist, 
         <img
           src={product.image}
           alt={product.title}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+          }}
           className="product-image"
           loading="lazy"
         />

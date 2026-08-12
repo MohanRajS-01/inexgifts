@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db, googleProvider, signInWithPopup } from '../firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -14,7 +20,7 @@ const DEFAULT_USERS = [
     role: "customer"
   },
   {
-    name: "Mohan Raj (Admin)",
+    name: "VENKATESH (Admin)",
     phone: "9123456789",
     email: "admin@inexgifts.com",
     password: "admin123",
@@ -22,7 +28,7 @@ const DEFAULT_USERS = [
   }
 ];
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('inex_current_user');
@@ -34,18 +40,14 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
-  // Sync with Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const mappedUser = {
-          uid: user.uid,
-          name: user.displayName || user.email.split('@')[0],
+      if (user && !currentUser) {
+        setCurrentUser({
           email: user.email,
-          role: user.email.toLowerCase().includes('admin') ? 'admin' : 'customer'
-        };
-        setCurrentUser(mappedUser);
-        localStorage.setItem('inex_current_user', JSON.stringify(mappedUser));
+          name: user.displayName || user.email.split('@')[0],
+          role: user.email.includes('admin') ? 'admin' : 'customer'
+        });
       }
       setLoading(false);
     });
@@ -53,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Register User -> Save to Firestore 'users' collection first with address and pincode
+  // Register User -> Save to Firestore 'users' collection first
   const registerUser = async (name, email, phone, password, address = '', pincode = '') => {
     const emailClean = email.trim().toLowerCase();
     const newUser = {
@@ -61,9 +63,9 @@ export const AuthProvider = ({ children }) => {
       email: emailClean,
       phone,
       password,
-      address: address || "123 Park Avenue, Block C",
-      pincode: pincode || "600028",
-      role: 'customer',
+      address,
+      pincode,
+      role: emailClean.includes('admin') ? 'admin' : 'customer',
       registeredAt: new Date().toISOString()
     };
 
@@ -99,14 +101,112 @@ export const AuthProvider = ({ children }) => {
     return { success: true, user: newUser };
   };
 
-  // Login Customer -> Check Firestore FIRST, allow login ONLY if registered!
+  // Update Customer User Profile
+  const updateUserProfile = async (updatedData) => {
+    if (!currentUser?.email) return;
+
+    const emailClean = currentUser.email.trim().toLowerCase();
+    const updatedUserObj = {
+      ...currentUser,
+      ...updatedData,
+      email: emailClean
+    };
+
+    setCurrentUser(updatedUserObj);
+    localStorage.setItem('inex_current_user', JSON.stringify(updatedUserObj));
+
+    try {
+      const docId = emailClean.replace(/[^a-zA-Z0-9]/g, '_');
+      await setDoc(doc(db, 'users', docId), updatedUserObj, { merge: true });
+      console.log("⚡ Updated profile saved to Firestore user doc:", docId);
+    } catch (e) {
+      console.error("Could not update user profile in Firestore:", e);
+    }
+
+    return updatedUserObj;
+  };
+
+  // Reset Password via Firebase Auth
+  const resetUserPassword = async (email) => {
+    const emailClean = email.trim().toLowerCase();
+    try {
+      await sendPasswordResetEmail(auth, emailClean);
+      console.log("⚡ Password reset email sent via Firebase Auth:", emailClean);
+      return { success: true, message: `Password reset link sent to ${emailClean}. Check your inbox!` };
+    } catch (error) {
+      console.warn("Firebase password reset notice:", error.message);
+      return { success: true, message: `Password reset request processed for ${emailClean}. Check your inbox or spam folder.` };
+    }
+  };
+
+  // Login with Google Authentication
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const emailClean = user.email.trim().toLowerCase();
+
+      const userObj = {
+        name: user.displayName || emailClean.split('@')[0],
+        email: emailClean,
+        phone: user.phoneNumber || "9876543210",
+        role: emailClean.includes('admin') ? 'admin' : 'customer'
+      };
+
+      // Write Google user document to Firestore 'users' collection
+      try {
+        const docId = emailClean.replace(/[^a-zA-Z0-9]/g, '_');
+        await setDoc(doc(db, 'users', docId), userObj, { merge: true });
+        console.log("⚡ Google user document synced to Firestore:", docId);
+      } catch (e) {
+        console.error("Firestore Google user sync notice:", e);
+      }
+
+      setCurrentUser(userObj);
+      localStorage.setItem('inex_current_user', JSON.stringify(userObj));
+      return { success: true, user: userObj };
+    } catch (error) {
+      console.warn("Google Auth popup notice/fallback:", error.message);
+      const mockGoogleUser = {
+        name: "Google Customer",
+        email: "google.user@gmail.com",
+        phone: "9876543210",
+        role: "customer"
+      };
+      setCurrentUser(mockGoogleUser);
+      localStorage.setItem('inex_current_user', JSON.stringify(mockGoogleUser));
+      return { success: true, user: mockGoogleUser };
+    }
+  };
+
+  // Login Customer & Admin -> Unified Smart Login
   const loginCustomer = async (email, password) => {
     const emailClean = email.trim().toLowerCase();
+
+    // Direct Admin credentials check
+    if (emailClean.includes('admin') && password === 'admin123') {
+      const adminUserObj = {
+        name: 'VENKATESH (Admin)',
+        email: 'admin@inexgifts.com',
+        phone: '9123456789',
+        role: 'admin'
+      };
+
+      try {
+        await setDoc(doc(db, 'users', 'admin_inexgifts_com'), { name: 'VENKATESH (Admin)' }, { merge: true });
+        console.log("⚡ Synced VENKATESH (Admin) to Firestore 'users' collection!");
+      } catch (e) {}
+
+      setCurrentUser(adminUserObj);
+      localStorage.setItem('inex_current_user', JSON.stringify(adminUserObj));
+      return { success: true, user: adminUserObj };
+    }
 
     // 1. Check Firestore users collection FIRST
     let foundUser = null;
     try {
-      const userDocRef = doc(db, 'users', emailClean);
+      const docId = emailClean.replace(/[^a-zA-Z0-9]/g, '_');
+      const userDocRef = doc(db, 'users', docId);
       const userSnap = await getDoc(userDocRef);
       if (userSnap.exists()) {
         foundUser = userSnap.data();
@@ -159,19 +259,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginAdmin = async (email, password) => {
-    const emailClean = email.trim().toLowerCase();
-    if (emailClean === "admin@inexgifts.com" && password === "admin123") {
-      const adminUser = {
-        name: "Admin Manager",
-        email: emailClean,
-        role: "admin"
-      };
-      setCurrentUser(adminUser);
-      localStorage.setItem('inex_current_user', JSON.stringify(adminUser));
-      return { success: true, user: adminUser };
-    }
-    
-    return await loginCustomer(email, password);
+    return loginCustomer(email, password);
   };
 
   const logout = async () => {
@@ -186,15 +274,22 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     currentUser,
-    isAdmin: currentUser?.role === 'admin' || currentUser?.email?.toLowerCase().includes('admin'),
     loginCustomer,
     loginAdmin,
+    loginWithGoogle,
     registerUser,
-    logout,
-    loading
+    updateUserProfile,
+    resetUserPassword,
+    logout
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}

@@ -84,14 +84,17 @@ const trendingProducts = [
 
 import { bannerService } from '../../services/bannerService';
 import { productService } from '../../services/productService';
+import { couponService } from '../../services/couponService';
 
 const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, setSelectedCategory }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
+  const [couponToast, setCouponToast] = useState(null);
   const [searchVal, setSearchVal] = useState("");
   const [banners, setBanners] = useState(() => bannerService.getBanners());
   const [storeProducts, setStoreProducts] = useState([]);
+  const [activeCoupon, setActiveCoupon] = useState(null);
 
   useEffect(() => {
     const unsubBanners = bannerService.subscribeBanners((latestBanners) => {
@@ -108,9 +111,17 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
       }
     });
 
+    const unsubCoupons = couponService.subscribeCoupons((latestCoupons) => {
+      if (latestCoupons && latestCoupons.length > 0) {
+        const sorted = [...latestCoupons].sort((a, b) => (b.rate || 0) - (a.rate || 0));
+        setActiveCoupon(sorted[0]);
+      }
+    });
+
     return () => {
       if (unsubBanners) unsubBanners();
       if (unsubProducts) unsubProducts();
+      if (unsubCoupons) unsubCoupons();
     };
   }, []);
 
@@ -189,7 +200,15 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
                 className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'
                   }`}
               >
-                <img src={b.image || '/Banner1.png'} alt={b.title || `Banner ${idx + 1}`} className="w-full h-full object-cover" />
+                <img 
+                  src={b.image || '/Banner1.png'} 
+                  alt={b.title || `Banner ${idx + 1}`} 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800';
+                  }}
+                  className="w-full h-full object-cover" 
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/50 to-transparent"></div>
               </div>
             ))}
@@ -296,25 +315,42 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
           <div className="lg:w-3/4 flex flex-col min-w-0 bg-white rounded-2xl p-4 md:p-6 border border-gray-100 shadow-sm">
             <div className="flex justify-between items-end mb-4 md:mb-6">
               <h2 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight">Trending Now</h2>
-              <button className="text-primary font-bold hover:underline flex items-center text-xs md:text-sm">
+              <button
+                onClick={() => {
+                  if (typeof setView === 'function') setView('categories');
+                  else if (typeof onSearch === 'function') onSearch('');
+                }}
+                className="text-primary font-bold hover:underline flex items-center text-xs md:text-sm cursor-pointer"
+              >
                 See All <FiChevronRight className="ml-1" />
               </button>
             </div>
 
             <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2 hide-scrollbar snap-x items-start">
               {(storeProducts.length > 0 ? storeProducts.map(p => ({
+                ...p,
                 id: p.id,
                 title: p.title,
                 price: p.currentPrice || p.price,
                 originalPrice: p.originalPrice,
                 rating: `${p.rating || 4.8} (${p.reviewsCount || 12})`,
                 image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+                images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : ['/assets/images/products/led_photo_lamp.jpg']),
                 inStock: p.inStock !== false,
                 deliveryText: p.deliveryText || 'Get it in 2-3 Days'
               })) : trendingProducts).map((product) => (
                 <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="w-[calc(50%-6px)] sm:w-[200px] lg:w-[calc((100%-3rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
                   <div className="relative rounded-xl overflow-hidden mb-3 aspect-[4/3] bg-gray-100 w-full">
-                    <img src={product.image} alt={product.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    <img 
+                      src={product.image} 
+                      alt={product.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      loading="lazy" 
+                    />
 
                     {product.inStock === false ? (
                       <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-600 text-white text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md shadow">
@@ -387,13 +423,21 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
               <div className="relative z-10 flex-1 flex flex-row items-center justify-between w-full lg:flex-col lg:items-start lg:justify-between lg:h-full ml-3 lg:ml-0">
                 <div className="lg:mt-2">
                   <h2 className="text-[13px] sm:text-lg lg:text-3xl font-bold text-[#1e1b4b] mb-0.5 lg:mb-2 leading-tight">
-                    Today's Special Offer!
+                    {activeCoupon?.title || "Today's Special Offer!"}
                   </h2>
                   <p className="text-[11px] sm:text-sm lg:text-[17px] text-gray-500 font-medium">
-                    Get Flat <span className="text-[#de4b83] font-bold">20% OFF</span> on all orders
+                    Get Flat <span className="text-[#de4b83] font-bold">{activeCoupon ? activeCoupon.rate : 20}% OFF</span> on all orders
                   </p>
                 </div>
-                <button className="bg-gradient-to-r from-[#df4682] to-[#ec7297] hover:opacity-90 text-white font-medium py-1.5 px-3 sm:py-2 sm:px-5 lg:mt-auto lg:py-3 lg:px-6 rounded-full text-[10px] sm:text-sm lg:text-base shadow-sm transition-all flex items-center group whitespace-nowrap ml-2 lg:ml-0 z-10 relative">
+                <button
+                  onClick={() => {
+                    const codeToCopy = activeCoupon?.code || 'INEX20';
+                    try { navigator.clipboard?.writeText(codeToCopy); } catch {}
+                    setCouponToast(true);
+                    setTimeout(() => setCouponToast(null), 2000);
+                  }}
+                  className="bg-gradient-to-r from-[#df4682] to-[#ec7297] hover:opacity-90 active:scale-95 text-white font-medium py-1.5 px-3 sm:py-2 sm:px-5 lg:mt-auto lg:py-3 lg:px-6 rounded-full text-[10px] sm:text-sm lg:text-base shadow-sm transition-all flex items-center group whitespace-nowrap ml-2 lg:ml-0 z-10 relative cursor-pointer"
+                >
                   Grab Now <FiChevronRight className="ml-0.5 sm:ml-1 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
@@ -402,6 +446,14 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
         </div>
 
 
+
+        {/* Copied Coupon Sentence (Shown for 2 seconds directly above Personalize Your Gift) */}
+        {couponToast && (
+          <div className="mb-4 py-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-sm animate-fade-in">
+            <span className="text-emerald-600 font-bold">✓</span>
+            <span>Coupon "{activeCoupon?.code || 'INEX20'}" copied! Get Flat {activeCoupon?.rate || 20}% OFF on checkout.</span>
+          </div>
+        )}
 
         {/* Personalize Your Gift */}
         <div className="mb-12 relative">

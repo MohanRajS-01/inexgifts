@@ -6,6 +6,7 @@ import {
   FiGift, FiFacebook, FiShoppingCart
 } from "react-icons/fi";
 import { FaWhatsapp, FaHeart, FaStar, FaQuoteLeft } from "react-icons/fa";
+import { couponService } from "../../services/couponService";
 import "./HomeScreen2.css";
 
 // Mock Data
@@ -178,6 +179,20 @@ export default function HomeScreen2({
   const [showNewsletterSuccess, setShowNewsletterSuccess] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [activeTab, setActiveTab] = useState("home");
+  const [seasonalCampaign, setSeasonalCampaign] = useState({
+    tag: 'Seasonal Campaign',
+    title: 'Flat 25% OFF + Free Express Shipping',
+    desc: 'Use promo code at checkout. Valid on customized couple gift boxes & hampers this week only.',
+    code: 'GIFT25',
+    discountText: '25% OFF'
+  });
+
+  useEffect(() => {
+    const unsub = couponService.subscribeSeasonalCampaign((campaign) => {
+      if (campaign) setSeasonalCampaign(campaign);
+    });
+    return () => unsub();
+  }, []);
 
   // Auto-play Hero Slider
   useEffect(() => {
@@ -623,23 +638,24 @@ export default function HomeScreen2({
           {/* Left Text */}
           <div className="relative z-10 flex-1 max-w-lg text-center md:text-left flex flex-col items-center md:items-start mb-8 md:mb-0">
             <span className="bg-white/10 backdrop-blur-md text-pink-300 border border-white/10 text-xs font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-4">
-              Seasonal Campaign
+              {seasonalCampaign.tag || 'Seasonal Campaign'}
             </span>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3">
-              Flat <span className="text-pink-400">25% OFF</span> + Free Express Shipping
+              {seasonalCampaign.title || 'Flat 25% OFF + Free Express Shipping'}
             </h2>
             <p className="text-slate-300 text-sm md:text-base font-medium mb-8 leading-relaxed max-w-sm">
-              Use promo code at checkout. Valid on customized couple gift boxes & hampers this week only.
+              {seasonalCampaign.desc || 'Use promo code at checkout.'}
             </p>
             <div className="flex items-center gap-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-1.5 pl-5 w-full max-w-xs sm:w-auto">
               <span className="text-xs font-extrabold tracking-widest text-slate-100">PROMO:</span>
-              <span className="text-sm font-black tracking-wider text-pink-400">GIFT25</span>
+              <span className="text-sm font-black tracking-wider text-pink-400">{seasonalCampaign.code || 'GIFT25'}</span>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText("GIFT25");
-                  triggerToast("Promo code 'GIFT25' copied to clipboard!");
+                  const codeToCopy = seasonalCampaign.code || 'GIFT25';
+                  navigator.clipboard.writeText(codeToCopy);
+                  triggerToast(`Promo code '${codeToCopy}' copied to clipboard!`);
                 }}
-                className="bg-white hover:bg-slate-50 text-indigo-900 font-extrabold text-xs tracking-wider uppercase py-2.5 px-5 rounded-full transition-all ml-auto"
+                className="bg-white hover:bg-slate-50 text-indigo-900 font-extrabold text-xs tracking-wider uppercase py-2.5 px-5 rounded-full transition-all ml-auto cursor-pointer active:scale-95"
               >
                 Copy
               </button>

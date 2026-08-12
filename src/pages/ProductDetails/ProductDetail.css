@@ -68,21 +68,36 @@
   z-index: 2;
 }
 
-.share-btn {
+.product-share-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background-color: rgba(255, 255, 255, 0.95);
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  z-index: 2;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.share-btn i {
-  width: 18px;
-  height: 18px;
+.product-share-btn:hover {
+  background-color: #ffffff;
+  color: #4f37fd;
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(79, 55, 253, 0.2);
+}
+
+.product-share-btn:active {
+  transform: scale(0.95);
 }
 
 .image-counter {
@@ -230,7 +245,8 @@
 .features-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  margin-top: 32px;
   margin-bottom: 24px;
 }
 
@@ -672,45 +688,23 @@
   transform: scale(0.98);
 }
 
-@media (min-width: 1024px) {
+/* Hide sticky bottom bar on Desktop/Web View to present a single clean Add to Cart section under free delivery */
+@media (min-width: 768px) {
+  .bottom-bar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
   .bottom-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     background-color: var(--bg-main);
-    padding: 24px 0 32px 0;
+    padding: 12px 16px;
     z-index: 100;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-  }
-
-  .bottom-bar-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 40px;
-  }
-}
-
-@media (max-width: 375px) {
-  .shapes-grid { grid-template-columns: repeat(2, 1fr); }
-  .colors-grid { grid-template-columns: repeat(1, 1fr); }
-  .bases-grid { grid-template-columns: repeat(1, 1fr); }
-  .bottom-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .bottom-bar { align-items: flex-start; }
-  .add-to-cart-btn { max-width: 100%; }
-}
-
-@media (min-width: 1024px) {
-  .bottom-bar {
-    position: static;
-    box-shadow: none;
-    padding: 24px 0 0 0;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
     border-top: 1px solid var(--border-color);
-    margin-top: 24px;
   }
-  .bottom-actions { max-width: 350px; }
 }

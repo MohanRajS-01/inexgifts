@@ -44,32 +44,84 @@ const heroImages = [
   },
 ];
 
-const features = [
-  { icon: Gift, label: 'Personalized Just for You', className: 'purple-bg' },
-  { icon: Sun, label: 'Soft LED Glow', className: 'blue-bg' },
-  { icon: Leaf, label: 'Energy Efficient', className: 'indigo-bg' },
-  { icon: ShieldCheck, label: 'Premium Acrylic', className: 'navy-bg' },
-  { icon: Usb, label: 'USB Powered', className: 'violet-bg' },
-  { icon: Shield, label: 'Safe & Long Lasting', className: 'sky-bg' },
-];
+const getDynamicSpecsAndFeatures = (product) => {
+  const cat = (product?.category || '').toLowerCase();
+  const title = (product?.title || '').toLowerCase();
+  const customMat = product?.material || '';
+  const customPkg = product?.packageIncludes || '';
 
-const detailsColumns = [
-  [
-    { label: 'Material', value: 'Acrylic + Wooden Base' },
-    { label: 'Light Type', value: 'LED' },
-    { label: 'Power Source', value: 'USB Cable (Included)' },
-    { label: 'Voltage', value: '5V' },
-    { label: 'Wattage', value: '3W' },
-    { label: 'Product Dimensions', value: '18 x 16 x 5 cm' },
-  ],
-  [
-    { label: 'Photo', value: '1 Photo (Customizable)' },
-    { label: 'Printing', value: 'High Quality UV Print' },
-    { label: 'Light Colors', value: 'Warm White / Cool White / Multicolor' },
-    { label: 'Base Options', value: 'Wooden / White' },
-    { label: 'Package Includes', value: '1 LED Lamp, USB Cable, User Manual, Gift Box' },
-  ],
-];
+  let col1 = [];
+  let col2 = [];
+
+  if (cat.includes('frame') || title.includes('frame') || title.includes('collage')) {
+    col1 = [
+      { label: 'Material', value: customMat || 'Solid Hardwood & Premium Glass' },
+      { label: 'Photo Size', value: 'High Definition Photo Print Included' },
+      { label: 'Mounting Type', value: 'Wall Hanging & Table Stand Included' },
+      { label: 'Finish', value: 'Smooth Matte Natural Wood Polish' },
+      { label: 'Product Dimensions', value: '12 x 18 inches (Customizable)' },
+    ];
+    col2 = [
+      { label: 'Photo Capacity', value: 'Multiple Photo Collage Layout' },
+      { label: 'Printing Technology', value: 'HD Glossy Waterproof UV Print' },
+      { label: 'Durability', value: 'Dustproof & Fade Resistant (10+ Yrs)' },
+      { label: 'Package Includes', value: customPkg || '1 Wooden Frame, Wall Hooks, Desktop Stand' },
+    ];
+  } else if (cat.includes('chocolate') || cat.includes('box') || cat.includes('gift set') || title.includes('chocolate')) {
+    col1 = [
+      { label: 'Type', value: 'Artisanal Premium Handcrafted Chocolates' },
+      { label: 'Flavors', value: 'Assorted Dark, Milk & Hazelnut Truffles' },
+      { label: 'Weight', value: '350g (12 - 16 Pieces)' },
+      { label: 'Dietary Info', value: '100% Vegetarian' },
+      { label: 'Shelf Life', value: '6 Months from Manufacture Date' },
+    ];
+    col2 = [
+      { label: 'Customization', value: 'Personalized Greeting Card & Name Print' },
+      { label: 'Storage', value: 'Store in a Cool & Dry Place (18°C - 22°C)' },
+      { label: 'Occasion', value: 'Birthday, Anniversary & Special Celebrations' },
+      { label: 'Package Includes', value: customPkg || '1 Premium Gift Box, Greeting Card, Ribbon Wrapping' },
+    ];
+  } else if (cat.includes('mug') || cat.includes('cushion') || title.includes('mug') || title.includes('cushion')) {
+    col1 = [
+      { label: 'Material', value: customMat || (title.includes('cushion') ? 'Soft Velvet Satin Microfiber' : 'High Grade AAA Ceramic') },
+      { label: 'Capacity / Size', value: title.includes('cushion') ? '16 x 16 inches' : '350 ml (Standard Coffee Mug)' },
+      { label: 'Print Type', value: 'Full Wrap Permanent Sublimation Print' },
+      { label: 'Maintenance', value: title.includes('cushion') ? 'Washable Cover with Filler' : 'Microwave & Dishwasher Safe' },
+    ];
+    col2 = [
+      { label: 'Photo Quality', value: 'Ultra HD Vibrant Color Print' },
+      { label: 'Durability', value: 'Scratch & Fade Proof Print' },
+      { label: 'Package Includes', value: customPkg || (title.includes('cushion') ? '1 Printed Cushion Cover + Soft Filler' : '1 Printed Ceramic Mug in Thermocol Box') },
+    ];
+  } else {
+    col1 = [
+      { label: 'Material', value: customMat || 'Acrylic + Wooden Base' },
+      { label: 'Light Type', value: 'LED Warm Glow' },
+      { label: 'Power Source', value: 'USB Cable (Included)' },
+      { label: 'Voltage', value: '5V (Low Power Consumption)' },
+      { label: 'Wattage', value: '3W' },
+      { label: 'Product Dimensions', value: '18 x 16 x 5 cm' },
+    ];
+    col2 = [
+      { label: 'Photo Customization', value: '1 Custom Photo Engraved' },
+      { label: 'Printing', value: 'High Quality Laser Etched / UV Print' },
+      { label: 'Light Colors', value: 'Warm White / Cool White / Multicolor' },
+      { label: 'Base Options', value: 'Wooden / White Base' },
+      { label: 'Package Includes', value: customPkg || `1 ${product?.title || 'Personalized Item'}, USB Cable, Gift Box` },
+    ];
+  }
+
+  const featuresList = [
+    { icon: Gift, label: 'Personalized Just for You', className: 'purple-bg' },
+    { icon: Sun, label: cat.includes('frame') ? 'HD Vivid Colors' : cat.includes('chocolate') ? 'Freshly Handcrafted' : 'Soft LED Glow', className: 'blue-bg' },
+    { icon: Leaf, label: 'Premium Quality Finish', className: 'indigo-bg' },
+    { icon: ShieldCheck, label: customMat ? customMat.slice(0, 20) : 'High Grade Durable Material', className: 'navy-bg' },
+    { icon: Usb, label: cat.includes('lamp') ? 'USB Powered' : 'Gift Packaging Included', className: 'violet-bg' },
+    { icon: Shield, label: 'Safe & Long Lasting', className: 'sky-bg' },
+  ];
+
+  return { detailsColumns: [col1, col2], features: featuresList };
+};
 
 const ratingBars = [
   { value: '5', width: '82%' },
@@ -166,6 +218,10 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
   const [currentSlide, setCurrentSlide] = useState(0);
   const [similarWishlist, setSimilarWishlist] = useState(similarProducts.map(() => false));
   const [addedFeedback, setAddedFeedback] = useState(false);
+
+  const dynamicSpecs = useMemo(() => getDynamicSpecsAndFeatures(product), [product]);
+  const features = dynamicSpecs.features;
+  const detailsColumns = dynamicSpecs.detailsColumns;
 
   // Firestore Customer Reviews
   const [firestoreReviews, setFirestoreReviews] = useState([]);
@@ -550,7 +606,15 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
             {similarProducts.map((product, index) => (
               <div className="product-card" key={product.title}>
                 <div className="card-img-container">
-                  <img src={product.image} alt={product.title} className="card-img" />
+                  <img 
+                    src={product.image} 
+                    alt={product.title} 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+                    }}
+                    className="card-img" 
+                  />
                   <button className="card-wishlist" type="button" aria-label="Add to wishlist" onClick={() => handleSimilarWishlist(index)}>
                     <Heart
                       fill={similarWishlist[index] ? '#EF4444' : 'none'}

@@ -11,7 +11,7 @@ const DEFAULT_USERS = [
     registeredAt: new Date().toISOString()
   },
   {
-    name: "Mohan Raj (Admin)",
+    name: "VENKATESH (Admin)",
     phone: "9123456789",
     email: "admin@inexgifts.com",
     password: "admin123",

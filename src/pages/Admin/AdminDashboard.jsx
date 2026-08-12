@@ -4,6 +4,7 @@ import { orderService } from '../../services/orderService';
 import { couponService } from '../../services/couponService';
 import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
+import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 import { 
   FiImage, 
@@ -21,12 +22,14 @@ import {
   FiTag,
   FiBox,
   FiFolderPlus,
-  FiX
+  FiX,
+  FiUsers,
+  FiSearch
 } from 'react-icons/fi';
 
 export default function AdminDashboard({ setView }) {
   const { logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('banners'); // 'banners' | 'orders' | 'products' | 'coupons'
+  const [activeTab, setActiveTab] = useState('banners'); // 'banners' | 'orders' | 'products' | 'coupons' | 'users'
 
   // Banner State
   const [banners, setBanners] = useState([]);
@@ -64,13 +67,30 @@ export default function AdminDashboard({ setView }) {
 
   // Coupons State
   const [coupons, setCoupons] = useState([]);
+  const [editingCoupon, setEditingCoupon] = useState(null);
   const [showCouponForm, setShowCouponForm] = useState(false);
   const [couponForm, setCouponForm] = useState({
     code: '',
+    title: "Today's Special Offer!",
     rate: 20,
     desc: 'Flat 20% OFF Discount',
-    minOrder: 499
+    minOrder: 499,
+    active: true
   });
+
+  // Seasonal Campaign State
+  const [seasonalCampaign, setSeasonalCampaign] = useState({
+    tag: 'Seasonal Campaign',
+    title: 'Flat 25% OFF + Free Express Shipping',
+    desc: 'Use promo code at checkout. Valid on customized couple gift boxes & hampers this week only.',
+    code: 'GIFT25',
+    discountText: '25% OFF'
+  });
+  const [showSeasonalForm, setShowSeasonalForm] = useState(false);
+
+  // Registered Users State
+  const [users, setUsers] = useState([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Feedback Notification
   const [feedback, setFeedback] = useState(null);
@@ -104,9 +124,17 @@ export default function AdminDashboard({ setView }) {
     return () => unsubProds();
   }, []);
 
+  // Load Users with live subscription
+  useEffect(() => {
+    const unsubUsers = userService.subscribeUsers((latestUsers) => {
+      setUsers(latestUsers);
+    });
+    return () => unsubUsers();
+  }, []);
+
   // Load Orders
   const fetchOrders = async () => {
-    const data = await orderService.getOrders('admin@inexgifts.com');
+    const data = await orderService.getAllOrders();
     setOrders(data);
   };
 
@@ -116,10 +144,35 @@ export default function AdminDashboard({ setView }) {
     setCoupons(coups);
   };
 
+  // Load Registered Users
+  const fetchUsers = async () => {
+    const uList = await userService.getUsers();
+    setUsers(uList);
+    showNotification("🔄 Refreshed registered users list from Firestore!");
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchCoupons();
+    fetchUsers();
+    const unsubSeasonal = couponService.subscribeSeasonalCampaign((data) => {
+      if (data) setSeasonalCampaign(data);
+    });
+    return () => unsubSeasonal();
   }, []);
+
+  const handleSaveSeasonalSubmit = async (e) => {
+    e.preventDefault();
+    if (!seasonalCampaign.title || !seasonalCampaign.code) {
+      alert("Please enter title and promo code.");
+      return;
+    }
+
+    await couponService.saveSeasonalCampaign(seasonalCampaign);
+    setShowSeasonalForm(false);
+    showNotification("✨ Seasonal Campaign Banner & Promo Code saved live in Firestore!");
+    fetchCoupons();
+  };
 
   // Banner Actions
   const handleOpenNewBanner = () => {
@@ -184,6 +237,7 @@ export default function AdminDashboard({ setView }) {
       originalPrice: 1999,
       currentPrice: 1499,
       image: '/assets/images/products/led_photo_lamp.jpg',
+      images: ['/assets/images/products/led_photo_lamp.jpg'],
       inStock: true,
       deliveryText: 'Get it in 2-3 Business Days'
     });
@@ -193,6 +247,9 @@ export default function AdminDashboard({ setView }) {
 
   const handleEditProduct = (p) => {
     setEditingProduct(p);
+    const existingImages = Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : (p.image ? [p.image] : []);
     setProductForm({
       id: p.id,
       title: p.title || '',
@@ -200,11 +257,42 @@ export default function AdminDashboard({ setView }) {
       originalPrice: p.originalPrice || Math.round((p.currentPrice || 999) * 1.25),
       currentPrice: p.currentPrice || 999,
       image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+      images: existingImages.length > 0 ? existingImages : ['/assets/images/products/led_photo_lamp.jpg'],
       inStock: p.inStock !== false,
       deliveryText: p.deliveryText || 'Get it in 2-3 Business Days'
     });
     setShowCustomCatInput(false);
     setShowProductForm(true);
+  };
+
+  const handleAddImageField = () => {
+    setProductForm(prev => ({
+      ...prev,
+      images: [...(prev.images || []), '']
+    }));
+  };
+
+  const handleImageFieldChange = (index, value) => {
+    setProductForm(prev => {
+      const updated = [...(prev.images || [])];
+      updated[index] = value;
+      return {
+        ...prev,
+        image: index === 0 ? value : (prev.image || value),
+        images: updated
+      };
+    });
+  };
+
+  const handleRemoveImageField = (index) => {
+    setProductForm(prev => {
+      const updated = (prev.images || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        image: updated[0] || '',
+        images: updated.length > 0 ? updated : ['']
+      };
+    });
   };
 
   const handleToggleStockStatus = async (product) => {
@@ -221,9 +309,22 @@ export default function AdminDashboard({ setView }) {
       return;
     }
 
-    await productService.addProduct(productForm);
+    const cleanImages = (productForm.images || [])
+      .map(img => typeof img === 'string' ? img.trim() : '')
+      .filter(img => img !== '');
+
+    const primaryImage = cleanImages[0] || productForm.image || '/assets/images/products/led_photo_lamp.jpg';
+    const finalImages = cleanImages.length > 0 ? cleanImages : [primaryImage];
+
+    const finalProductPayload = {
+      ...productForm,
+      image: primaryImage,
+      images: finalImages
+    };
+
+    await productService.addProduct(finalProductPayload);
     setShowProductForm(false);
-    showNotification(editingProduct ? `✨ Product '${productForm.title}' details updated in Firestore!` : `🛍️ Product '${productForm.title}' created in Firestore!`);
+    showNotification(editingProduct ? `✨ Product '${productForm.title}' details updated in Firestore!` : `🛍️ Product '${productForm.title}' created with ${finalImages.length} image(s) in Firestore!`);
   };
 
   const handleDeleteProduct = async (id) => {
@@ -248,6 +349,37 @@ export default function AdminDashboard({ setView }) {
   };
 
   // Coupon Actions
+  const handleOpenNewCoupon = () => {
+    setEditingCoupon(null);
+    setCouponForm({
+      code: '',
+      rate: 20,
+      desc: 'Flat 20% OFF Discount',
+      minOrder: 499,
+      active: true
+    });
+    setShowCouponForm(true);
+  };
+
+  const handleEditCoupon = (coupon) => {
+    setEditingCoupon(coupon);
+    setCouponForm({
+      code: coupon.code,
+      rate: coupon.rate,
+      desc: coupon.desc || '',
+      minOrder: coupon.minOrder || 0,
+      active: coupon.active !== false
+    });
+    setShowCouponForm(true);
+  };
+
+  const handleToggleCouponStatus = async (coupon) => {
+    const currentActive = coupon.active !== false;
+    await couponService.toggleCouponStatus(coupon.code, currentActive);
+    await fetchCoupons();
+    showNotification(!currentActive ? `🟢 Coupon '${coupon.code}' Enabled (Active)!` : `🔴 Coupon '${coupon.code}' Disabled (Inactive)!`);
+  };
+
   const handleSaveCouponSubmit = async (e) => {
     e.preventDefault();
     if (!couponForm.code || !couponForm.rate) {
@@ -255,16 +387,24 @@ export default function AdminDashboard({ setView }) {
       return;
     }
 
-    await couponService.addCoupon(couponForm);
+    if (editingCoupon) {
+      await couponService.updateCoupon(editingCoupon.code, couponForm);
+      showNotification(`✏️ Coupon '${couponForm.code}' updated in Firestore!`);
+    } else {
+      await couponService.addCoupon(couponForm);
+      showNotification(`🏷️ Coupon '${couponForm.code.toUpperCase()}' created in Firestore!`);
+    }
+
     setShowCouponForm(false);
+    setEditingCoupon(null);
     setCouponForm({
       code: '',
       rate: 20,
       desc: 'Flat 20% OFF Discount',
-      minOrder: 499
+      minOrder: 499,
+      active: true
     });
     await fetchCoupons();
-    showNotification(`🏷️ Coupon '${couponForm.code.toUpperCase()}' created in Firestore! Customers can now type and apply it.`);
   };
 
   const handleDeleteCoupon = async (code) => {
@@ -393,6 +533,17 @@ export default function AdminDashboard({ setView }) {
           >
             <FiTag className="h-4 w-4" /> Manage Coupons ({(coupons || []).length})
           </button>
+
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
+              activeTab === 'users'
+                ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FiUsers className="h-4 w-4" /> Registered Users ({(users || []).length})
+          </button>
         </div>
 
         {/* TAB 1: BANNER MANAGEMENT */}
@@ -519,7 +670,15 @@ export default function AdminDashboard({ setView }) {
               {(banners || []).map((b, idx) => (
                 <div key={b.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg flex flex-col">
                   <div className="relative h-44 bg-slate-800 overflow-hidden">
-                    <img src={b.image} alt={b.title} className="w-full h-full object-cover" />
+                    <img 
+                      src={b.image} 
+                      alt={b.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800';
+                      }} 
+                      className="w-full h-full object-cover" 
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
                     <span className="absolute top-3 left-3 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow">
                       Slide #{idx + 1}
@@ -767,15 +926,70 @@ export default function AdminDashboard({ setView }) {
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-300 font-semibold block mb-1">Material / Finish (Optional)</label>
+                        <input
+                          type="text"
+                          value={productForm.material || ''}
+                          onChange={(e) => setProductForm({ ...productForm, material: e.target.value })}
+                          placeholder="e.g. Premium Acrylic + Solid Wood"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-300 font-semibold block mb-1">Package Includes (Optional)</label>
+                        <input
+                          type="text"
+                          value={productForm.packageIncludes || ''}
+                          onChange={(e) => setProductForm({ ...productForm, packageIncludes: e.target.value })}
+                          placeholder="e.g. 1 Product, USB Cable, Gift Box"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Multiple Product Images UI */}
                     <div>
-                      <label className="text-xs text-slate-300 font-semibold block mb-1">Product Image URL</label>
-                      <input
-                        type="text"
-                        required
-                        value={productForm.image}
-                        onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-mono"
-                      />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs text-slate-300 font-semibold block">Product Images ({productForm.images?.length || 1})</label>
+                        <button
+                          type="button"
+                          onClick={handleAddImageField}
+                          className="text-[11px] font-extrabold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        >
+                          <FiPlus className="h-3 w-3" /> + Add Image URL
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {(productForm.images || [productForm.image || '']).map((imgUrl, imgIdx) => (
+                          <div key={imgIdx} className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 w-14 shrink-0">
+                              {imgIdx === 0 ? 'Cover ★' : `Img #${imgIdx + 1}`}
+                            </span>
+                            <input
+                              type="text"
+                              required={imgIdx === 0}
+                              value={imgUrl}
+                              onChange={(e) => handleImageFieldChange(imgIdx, e.target.value)}
+                              placeholder={imgIdx === 0 ? "Cover Image URL (e.g. /assets/images/product.jpg)" : "Additional Gallery Image URL"}
+                              className="flex-1 bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 font-mono"
+                            />
+                            {imgIdx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImageField(imgIdx)}
+                                className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition"
+                                title="Remove Image"
+                              >
+                                <FiTrash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">If only 1 image URL is provided, customers will see only 1 image (no extra fake thumbnails).</p>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
@@ -803,7 +1017,15 @@ export default function AdminDashboard({ setView }) {
               {products.map((p) => (
                 <div key={p.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-md">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={p.image} alt={p.title} className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0" />
+                    <img 
+                      src={p.image} 
+                      alt={p.title} 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=400';
+                      }} 
+                      className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0" 
+                    />
                     <div className="min-w-0 space-y-0.5">
                       <h4 className="text-xs font-bold text-white truncate">{p.title}</h4>
                       <p className="text-[10px] text-slate-400 truncate">
@@ -850,16 +1072,138 @@ export default function AdminDashboard({ setView }) {
 
         {/* TAB 4: COUPONS MANAGEMENT */}
         {activeTab === 'coupons' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
+          <div className="space-y-6">
+            {/* Seasonal Campaign Featured Banner Box */}
+            <div className="bg-gradient-to-r from-indigo-900/90 via-purple-900/90 to-pink-900/90 border border-indigo-500/30 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="space-y-1 text-center md:text-left">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-300 bg-pink-500/20 px-3 py-1 rounded-full border border-pink-500/30">
+                  ⭐ Featured Homepage Banner: {seasonalCampaign.tag || 'Seasonal Campaign'}
+                </span>
+                <h4 className="text-xl font-extrabold text-white pt-1">{seasonalCampaign.title}</h4>
+                <p className="text-xs text-slate-300 max-w-xl">{seasonalCampaign.desc}</p>
+                <div className="pt-2 flex items-center justify-center md:justify-start gap-2 text-xs font-mono">
+                  <span className="text-slate-400 font-bold">Active Promo Code:</span>
+                  <span className="bg-pink-500/20 text-pink-400 font-extrabold px-3 py-1 rounded-lg border border-pink-500/30 text-sm">
+                    {seasonalCampaign.code}
+                  </span>
+                  <span className="text-emerald-400 font-bold ml-2">({seasonalCampaign.discountText || '25% OFF'})</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSeasonalForm(true)}
+                className="px-5 py-3 bg-white text-indigo-950 font-extrabold text-xs rounded-xl shadow-lg hover:bg-slate-100 transition cursor-pointer shrink-0"
+              >
+                ✏️ Edit Seasonal Campaign Banner
+              </button>
+            </div>
+
+            {/* Seasonal Campaign Edit Modal */}
+            {showSeasonalForm && (
+              <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h4 className="text-base font-extrabold text-white">
+                      ⭐ Edit Seasonal Campaign Banner & Code
+                    </h4>
+                    <button
+                      onClick={() => setShowSeasonalForm(false)}
+                      className="text-slate-400 hover:text-white p-1"
+                    >
+                      <FiX className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveSeasonalSubmit} className="space-y-3">
+                    <div>
+                      <label className="text-xs text-slate-300 font-semibold block mb-1">Campaign Badge Tag</label>
+                      <input
+                        type="text"
+                        value={seasonalCampaign.tag}
+                        onChange={(e) => setSeasonalCampaign({ ...seasonalCampaign, tag: e.target.value })}
+                        placeholder="e.g. Seasonal Campaign or Festive Discount"
+                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-300 font-semibold block mb-1">Banner Headline Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={seasonalCampaign.title}
+                        onChange={(e) => setSeasonalCampaign({ ...seasonalCampaign, title: e.target.value })}
+                        placeholder="e.g. Flat 25% OFF + Free Express Shipping"
+                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-xl p-3 outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-300 font-semibold block mb-1">Promo Code (e.g. GIFT25)</label>
+                        <input
+                          type="text"
+                          required
+                          value={seasonalCampaign.code}
+                          onChange={(e) => setSeasonalCampaign({ ...seasonalCampaign, code: e.target.value.toUpperCase() })}
+                          placeholder="e.g. GIFT25"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs font-mono font-extrabold rounded-xl p-3 outline-none focus:border-indigo-500 uppercase text-pink-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-slate-300 font-semibold block mb-1">Discount Rate / Badge</label>
+                        <input
+                          type="text"
+                          value={seasonalCampaign.discountText}
+                          onChange={(e) => setSeasonalCampaign({ ...seasonalCampaign, discountText: e.target.value })}
+                          placeholder="e.g. 25% OFF"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-300 font-semibold block mb-1">Subtitle / Description Text</label>
+                      <textarea
+                        rows={2}
+                        value={seasonalCampaign.desc}
+                        onChange={(e) => setSeasonalCampaign({ ...seasonalCampaign, desc: e.target.value })}
+                        placeholder="e.g. Use promo code at checkout. Valid on customized couple gift hampers."
+                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 resize-none font-medium"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setShowSeasonalForm(false)}
+                        className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
+                      >
+                        Save Seasonal Banner ✓
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-2">
               <div>
                 <h3 className="text-lg font-bold text-white">Add & Manage Promo Coupons</h3>
                 <p className="text-xs text-slate-400">Create discount coupons in Firestore. Customers apply these exact codes on the Cart Page.</p>
               </div>
 
               <button
-                onClick={() => setShowCouponForm(true)}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-1.5"
+                onClick={handleOpenNewCoupon}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer"
               >
                 <FiPlus className="h-4 w-4" /> Add New Coupon
               </button>
@@ -869,17 +1213,40 @@ export default function AdminDashboard({ setView }) {
             {showCouponForm && (
               <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                  <h4 className="text-base font-extrabold text-white">Create Coupon Code in Firestore</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-extrabold text-white">
+                      {editingCoupon ? '✏️ Edit Coupon Code in Firestore' : '➕ Create Coupon Code in Firestore'}
+                    </h4>
+                    <button
+                      onClick={() => setShowCouponForm(false)}
+                      className="text-slate-400 hover:text-white p-1"
+                    >
+                      <FiX className="h-5 w-5" />
+                    </button>
+                  </div>
+
                   <form onSubmit={handleSaveCouponSubmit} className="space-y-3">
+                    <div>
+                      <label className="text-xs text-slate-300 font-semibold block mb-1">Banner Offer Title (Homepage Headline)</label>
+                      <input
+                        type="text"
+                        value={couponForm.title}
+                        onChange={(e) => setCouponForm({ ...couponForm, title: e.target.value })}
+                        placeholder="e.g. Today's Special Offer!"
+                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-bold"
+                      />
+                    </div>
+
                     <div>
                       <label className="text-xs text-slate-300 font-semibold block mb-1">Coupon Code (e.g. INEX20)</label>
                       <input
                         type="text"
                         required
+                        disabled={!!editingCoupon}
                         value={couponForm.code}
                         onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
                         placeholder="e.g. SPECIAL25"
-                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs font-mono font-bold rounded-xl p-3 outline-none focus:border-indigo-500 uppercase"
+                        className="w-full bg-slate-800 border border-slate-700 text-white text-xs font-mono font-bold rounded-xl p-3 outline-none focus:border-indigo-500 uppercase disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -892,7 +1259,7 @@ export default function AdminDashboard({ setView }) {
                           value={couponForm.rate}
                           onChange={(e) => setCouponForm({ ...couponForm, rate: e.target.value })}
                           placeholder="e.g. 20"
-                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-bold text-amber-400"
                         />
                       </div>
 
@@ -902,7 +1269,7 @@ export default function AdminDashboard({ setView }) {
                           type="number"
                           value={couponForm.minOrder}
                           onChange={(e) => setCouponForm({ ...couponForm, minOrder: e.target.value })}
-                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500"
+                          className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-bold"
                         />
                       </div>
                     </div>
@@ -918,7 +1285,20 @@ export default function AdminDashboard({ setView }) {
                       />
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-3">
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="couponActive"
+                        checked={couponForm.active !== false}
+                        onChange={(e) => setCouponForm({ ...couponForm, active: e.target.checked })}
+                        className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                      />
+                      <label htmlFor="couponActive" className="text-xs text-slate-300 font-semibold cursor-pointer">
+                        Enable Coupon (Active for customer checkout)
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
                       <button
                         type="button"
                         onClick={() => setShowCouponForm(false)}
@@ -928,9 +1308,9 @@ export default function AdminDashboard({ setView }) {
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl"
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
                       >
-                        Save Coupon to Firestore ✓
+                        {editingCoupon ? 'Update Coupon ✓' : 'Save Coupon ✓'}
                       </button>
                     </div>
                   </form>
@@ -941,25 +1321,161 @@ export default function AdminDashboard({ setView }) {
             {/* Coupons Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {coupons.map((c) => (
-                <div key={c.code} className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-4">
-                  <div className="space-y-1">
+                <div key={c.code} className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-extrabold text-amber-400 text-base">{c.code}</span>
                       <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/30">
                         {c.rate}% OFF
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300">{c.desc}</p>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
+                      c.active !== false
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}>
+                      {c.active !== false ? '🟢 Active' : '🔴 Disabled'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-slate-300 font-medium">{c.desc}</p>
                     <p className="text-[10px] text-slate-400">Min Order: ₹{c.minOrder || 0}</p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteCoupon(c.code)}
-                    className="p-2 bg-slate-700 hover:bg-red-500/30 text-red-400 rounded-xl transition"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                  </button>
+
+                  {/* Actions: Enable / Disable Toggle, Edit, Delete */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCouponStatus(c)}
+                      className={`px-3 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${
+                        c.active !== false
+                          ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}
+                    >
+                      {c.active !== false ? 'Disable 🚫' : 'Enable 🟢'}
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditCoupon(c)}
+                        title="Edit Coupon Details"
+                        className="p-2 bg-slate-700 hover:bg-indigo-600/40 text-indigo-300 rounded-xl transition cursor-pointer"
+                      >
+                        <FiEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCoupon(c.code)}
+                        title="Delete Coupon"
+                        className="p-2 bg-slate-700 hover:bg-red-500/30 text-red-400 rounded-xl transition cursor-pointer"
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: USER MANAGEMENT */}
+        {activeTab === 'users' && (
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FiUsers className="text-indigo-400" /> Customer & User Accounts ({(users || []).length})
+                </h3>
+                <p className="text-xs text-slate-400">View registered customers, delivery addresses, total orders, and lifetime spent.</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    placeholder="Search by name, email, phone..."
+                    className="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl pl-9 pr-4 py-2 outline-none focus:border-indigo-500 w-64 font-medium"
+                  />
+                </div>
+                <button
+                  onClick={fetchUsers}
+                  className="px-3.5 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-xs font-semibold text-slate-300 rounded-xl transition flex items-center gap-1.5"
+                >
+                  <FiRefreshCw className="h-3.5 w-3.5" /> Refresh Users
+                </button>
+              </div>
+            </div>
+
+            {/* Users List Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(users || [])
+                .filter(u => {
+                  if (!userSearchQuery) return true;
+                  const q = userSearchQuery.toLowerCase();
+                  return (
+                    (u.name && u.name.toLowerCase().includes(q)) ||
+                    (u.email && u.email.toLowerCase().includes(q)) ||
+                    (u.phone && u.phone.toLowerCase().includes(q))
+                  );
+                })
+                .map((u) => (
+                  <div key={u.email} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-md flex flex-col justify-between space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white font-extrabold text-sm flex items-center justify-center shadow-md shrink-0">
+                            {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-extrabold text-white truncate">
+                              {u.name}
+                            </h4>
+                            <span className="text-xs text-indigo-300 font-mono block truncate">{u.email}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
+                          u.role === 'admin'
+                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                          {u.role}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-700/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Phone:</span>
+                          <span className="font-semibold text-slate-200">{u.phone}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Pincode:</span>
+                          <span className="font-mono font-bold text-indigo-300">{u.pincode || 'N/A'}</span>
+                        </div>
+                        <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
+                          📍 <span className="text-slate-300">{(u.address || 'No Address Provided').replace(/,\s*Chennai\s*$/i, '')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-700/80 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Total Orders</span>
+                        <span className="font-extrabold text-white text-sm">{u.ordersCount} Placed</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">Total Spent</span>
+                        <span className="font-extrabold text-emerald-400 text-sm">₹{u.totalSpent}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         )}

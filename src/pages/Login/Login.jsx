@@ -10,7 +10,7 @@ const DEFAULT_USERS = [
     password: "password123",
   },
   {
-    name: "Mohan Raj",
+    name: "VENKATESH (Admin)",
     phone: "9123456789",
     email: "mohan@inexgifts.com",
     password: "password123",
@@ -103,9 +103,54 @@ const trustBadges = [
 ];
 
 export default function Login({ setView }) {
-  const { loginCustomer, registerUser } = useAuth() || {};
+  const { loginCustomer, registerUser, loginWithGoogle, resetUserPassword } = useAuth() || {};
+
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    const emailClean = forgotEmail.trim().toLowerCase();
+    if (!emailClean || !/\S+@\S+\.\S+/.test(emailClean)) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    try {
+      if (resetUserPassword) {
+        const res = await resetUserPassword(emailClean);
+        setSuccessMessage(res.message || `Password reset link has been sent to ${emailClean}! Check your email inbox.`);
+      } else {
+        setSuccessMessage(`Password reset request sent for ${emailClean}! Please check your email inbox.`);
+      }
+      setForgotPasswordModal(false);
+      setForgotEmail("");
+    } catch (err) {
+      setErrorMessage(err.message || "Failed to send password reset email.");
+    }
+  };
   const [activeTab, setActiveTab] = useState("login");
   const [loginMode, setLoginMode] = useState("email"); // "email" | "otp"
+
+  // Google Login Handler
+  const handleGoogleLogin = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      if (loginWithGoogle) {
+        const res = await loginWithGoogle();
+        setSuccessMessage(`Welcome, ${res.user.name}! Logging you in with Google...`);
+        setTimeout(() => {
+          if (typeof setView === "function") {
+            if (res.user.role === 'admin') {
+              setView("admin");
+            } else {
+              setView("home1");
+            }
+          }
+        }, 600);
+      }
+    } catch (err) {
+      setErrorMessage(err.message || "Could not sign in with Google.");
+    }
+  };
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -336,17 +381,6 @@ export default function Login({ setView }) {
     setOtp(Array(6).fill(""));
   };
 
-  const handleForgotPasswordSubmit = (e) => {
-    e.preventDefault();
-    if (!forgotEmail || !/\S+@\S+\.\S+/.test(forgotEmail)) {
-      alert("Please enter a valid email address.");
-      return;
-    }
-    alert(`Password reset link has been sent to ${forgotEmail}`);
-    setForgotPasswordModal(false);
-    setForgotEmail("");
-  };
-
   return (
     <div className="app min-h-screen bg-[#f6f2ff] text-[#1f1b33] flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-[1440px] grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
@@ -420,13 +454,6 @@ export default function Login({ setView }) {
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => typeof setView === 'function' && setView('admin-login')}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#ede9ff] bg-[#f0ebff] px-3.5 py-1.5 font-bold text-[#6c53ff] text-xs shadow-sm transition hover:bg-[#e4dcff]"
-                >
-                  🛡️ Admin Portal
-                </button>
                 <button type="button" className="inline-flex items-center gap-2 rounded-full border border-[#ede9ff] bg-[#fbf8ff] px-4 py-2 font-semibold text-[#5f5a7f] shadow-sm transition hover:bg-[#f4efff]">
                   English
                   <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -570,7 +597,7 @@ export default function Login({ setView }) {
                       </div>
                     </div>
 
-                    {/* Remember me & Demo options */}
+                    {/* Remember me options */}
                     <div className="flex items-center justify-between pt-1">
                       <label className="flex items-center gap-2.5 cursor-pointer text-[0.88rem] text-[#635c85]">
                         <input
@@ -581,13 +608,6 @@ export default function Login({ setView }) {
                         />
                         Remember me
                       </label>
-                      <button
-                        type="button"
-                        onClick={handleFillDemo}
-                        className="inline-flex items-center gap-1 text-[0.82rem] font-semibold text-[#7d67ff] bg-[#f4efff] hover:bg-[#eae3ff] px-2.5 py-1 rounded-full transition"
-                      >
-                        ⚡ Fill Demo Credentials
-                      </button>
                     </div>
 
                     {/* Submit Button */}
@@ -816,43 +836,24 @@ export default function Login({ setView }) {
               </form>
             )}
 
-            {/* Social Logins */}
+            {/* Social Logins (Google Only) */}
             <div className="mt-6 flex items-center gap-3 text-[0.82rem] uppercase tracking-[0.2em] text-[#a79fe4]">
               <span className="h-px flex-1 bg-[#ece6ff]"></span>
               or continue with
               <span className="h-px flex-1 bg-[#ece6ff]"></span>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="mt-4 flex justify-center">
               <button
                 type="button"
-                onClick={() => typeof setView === 'function' && setView('home1')}
-                className="flex h-12 items-center justify-center rounded-[18px] border border-[#ece6ff] bg-white text-[#3e3a58] shadow-sm transition hover:bg-[#f6f2ff]"
-                title="Google"
+                onClick={handleGoogleLogin}
+                className="w-full flex h-12 items-center justify-center gap-3 rounded-[22px] border border-[#ece6ff] bg-[#fbf9ff] hover:bg-white text-[#3e3a58] font-extrabold text-xs sm:text-sm shadow-xs transition cursor-pointer active:scale-95"
+                title="Google Login"
               >
                 <svg className="h-5 w-5" viewBox="0 0 488 512" xmlns="http://www.w3.org/2000/svg">
                   <path fill="#4285F4" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" />
                 </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => typeof setView === 'function' && setView('home1')}
-                className="flex h-12 items-center justify-center rounded-[18px] border border-[#ece6ff] bg-white text-[#3e3a58] shadow-sm transition hover:bg-[#f6f2ff]"
-                title="Facebook"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#1877F2">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => typeof setView === 'function' && setView('home1')}
-                className="flex h-12 items-center justify-center rounded-[18px] border border-[#ece6ff] bg-white text-[#3e3a58] shadow-sm transition hover:bg-[#f6f2ff]"
-                title="Apple"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.54 9.103 1.51 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.054 2.107-.973 3.956-.973 1.853 0 2.385.973 3.966.942 1.6-.027 2.661-1.474 3.64-2.9 1.128-1.64 1.592-3.23 1.621-3.314-.03-.016-3.11-1.194-3.143-4.757-.027-2.986 2.445-4.42 2.557-4.482-1.4-2.05-3.56-2.285-4.32-2.34-1.977-.16-3.83 1.21-4.838 1.21zM15.932 4.16c.808-.98 1.348-2.332 1.2-3.682-1.16.047-2.563.771-3.395 1.745-.733.844-1.373 2.215-1.2 3.543 1.29.1 2.613-.655 3.395-1.606z" />
-                </svg>
+                <span>Continue with Google</span>
               </button>
             </div>
           </div>

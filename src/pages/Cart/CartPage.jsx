@@ -240,6 +240,8 @@ const CartPage = ({
       await orderService.createOrder({
         totalAmount: finalTotal,
         items: safeCartItems,
+        appliedCoupon: appliedCoupon ? { code: appliedCoupon.code, rate: appliedCoupon.rate } : null,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
         customerEmail: currentUser?.email || 'user@example.com',
         customerName: currentUser?.name || 'Customer',
         shippingAddress: {
@@ -361,6 +363,11 @@ const CartPage = ({
             <PromoCode
               appliedCoupon={appliedCoupon}
               onApplyCoupon={handleApplyCoupon}
+              onRemoveCoupon={() => {
+                setAppliedCoupon(null);
+                triggerToast("Coupon removed! Select or enter another promo code.");
+              }}
+              subtotal={subtotal}
               onToast={triggerToast}
             />
 
