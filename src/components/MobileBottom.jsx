@@ -1,6 +1,6 @@
-import { FiHome, FiGrid, FiGift, FiShoppingBag, FiUser } from 'react-icons/fi';
+import { FiHome, FiHeart, FiGift, FiShoppingBag, FiUser } from 'react-icons/fi';
 
-const MobileBottomNav = ({ setView, currentView }) => {
+const MobileBottomNav = ({ setView, currentView, wishlistCount = 0 }) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex justify-between items-center px-2 pt-3 pb-3 z-50">
       
@@ -13,11 +13,18 @@ const MobileBottomNav = ({ setView, currentView }) => {
       </button>
 
       <button 
-        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-colors ${currentView === 'categories' ? 'text-[#4f46e5]' : 'text-gray-500 hover:text-[#4f46e5]'}`}
-        onClick={() => setView('categories')}
+        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-colors ${currentView === 'wishlist' ? 'text-[#4f46e5]' : 'text-gray-500 hover:text-[#4f46e5]'}`}
+        onClick={() => setView('wishlist')}
       >
-        <FiGrid className="h-6 w-6 stroke-[2]" />
-        <span className="text-[11px] font-medium">Categories</span>
+        <div className="relative">
+          <FiHeart className="h-6 w-6 stroke-[2]" />
+          {wishlistCount > 0 && (
+            <span className="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-bold text-white shadow">
+              {wishlistCount}
+            </span>
+          )}
+        </div>
+        <span className="text-[11px] font-medium">Wishlist</span>
       </button>
 
       {/* Center Gift Button - Floating */}

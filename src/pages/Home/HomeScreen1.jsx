@@ -1,7 +1,6 @@
 import { FiChevronRight, FiHeart, FiShoppingCart, FiUploadCloud, FiType, FiCalendar, FiEye, FiCheckCircle, FiShield, FiTruck, FiSmile, FiHeadphones, FiAward, FiSearch } from 'react-icons/fi';
 import { FaWhatsapp, FaHeart, FaThLarge } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
-import HomeScreen2 from "./HomeScreen2";
+import { useState, useEffect, useMemo } from 'react';
 
 const categories = [
   { name: 'Gift Boxes', image: '/Gift.jpg', bgColor: 'bg-purple-100' },
@@ -16,85 +15,55 @@ const categories = [
   { name: 'View All', icon: <FaThLarge />, bgColor: 'bg-purple-50', isViewAll: true },
 ];
 
-const trendingProducts = [
-  {
-    id: 1,
-    title: 'LED Photo Lamp',
-    discount: '-20%',
-    rating: '4.8 (125)',
-    price: '799',
-    originalPrice: '999',
-    image: '/LEDphoto.jpg'
-  },
-  {
-    id: 2,
-    title: 'Collage Photo Frame',
-    discount: '-15%',
-    rating: '4.7 (96)',
-    price: '679',
-    originalPrice: '799',
-    image: 'Customized.jpg'
-  },
-  {
-    id: 3,
-    title: 'Premium Gift Set',
-    discount: '-25%',
-    rating: '4.9 (201)',
-    price: '1,499',
-    originalPrice: '1,999',
-    image: '/Premium.jpg'
-  },
-  {
-    id: 4,
-    title: 'Customized Cushion',
-    image: '/Customcushion.jpg',
-    price: '499',
-    originalPrice: null,
-    rating: '4.6 (76)',
-    badge: 'New',
-  },
-  {
-    id: 5,
-    title: 'Personalized Mug',
-    image: '/Mug.jpg',
-    price: '299',
-    originalPrice: '399',
-    rating: '4.8 (342)',
-    discount: '-25%',
-  },
-  {
-    id: 6,
-    title: 'Wooden Engraved Frame',
-    image: '/Wooden.jpg',
-    price: '549',
-    originalPrice: '699',
-    rating: '4.7 (112)',
-    discount: '-21%',
-  },
-  {
-    id: 7,
-    title: 'Custom Name Necklace',
-    image: '/Necklace.jpg',
-    price: '899',
-    originalPrice: null,
-    rating: '4.9 (88)',
-    badge: 'Bestseller',
-  },
-];
 
 import { bannerService } from '../../services/bannerService';
 import { productService } from '../../services/productService';
 import { couponService } from '../../services/couponService';
+import { giftsData } from '../../data/gifts';
 
-const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, setSelectedCategory }) => {
+const Home = ({ onAddToCart, onAddToWishlist, wishlistItems = [], onSearch, onOpenProduct, setView, setSelectedCategory }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [wishlistItems, setWishlistItems] = useState({});
   const [showToast, setShowToast] = useState(false);
   const [couponToast, setCouponToast] = useState(null);
   const [searchVal, setSearchVal] = useState("");
   const [banners, setBanners] = useState(() => bannerService.getBanners());
   const [storeProducts, setStoreProducts] = useState([]);
   const [activeCoupon, setActiveCoupon] = useState(null);
+
+  const isProductWishlisted = (product) => {
+    if (!product || !Array.isArray(wishlistItems)) return false;
+    const pid = String(product.id || '');
+    const ptitle = product.title || product.name || '';
+    return wishlistItems.some(w => (pid && String(w.id) === pid) || (ptitle && w.title === ptitle));
+  };
+
+  const allCatalogProducts = useMemo(() => {
+    if (storeProducts.length > 0) {
+      const mapped = storeProducts.map(p => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'Gifts',
+        price: Number(p.currentPrice || p.price) || 999,
+        originalPrice: Number(p.originalPrice) || Math.round((Number(p.currentPrice || p.price) || 999) * 1.25),
+        rating: typeof p.rating === 'string' ? p.rating : `${p.rating || 4.8} (${p.reviewsCount || 12})`,
+        image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : ['/assets/images/products/led_photo_lamp.jpg']),
+        inStock: p.inStock !== false,
+        deliveryText: p.deliveryText || 'Get it in 2-3 Days',
+        badge: p.badge || 'Bestseller'
+      }));
+      const setIds = new Set(mapped.map(m => String(m.id)));
+      const remainder = giftsData.map(g => ({
+        ...g,
+        rating: `${g.rating} (${g.ratingCount || 125})`
+      })).filter(g => !setIds.has(String(g.id)));
+      return [...mapped, ...remainder];
+    }
+    return giftsData.map(g => ({
+      ...g,
+      rating: `${g.rating} (${g.ratingCount || 125})`
+    }));
+  }, [storeProducts]);
 
   useEffect(() => {
     const unsubBanners = bannerService.subscribeBanners((latestBanners) => {
@@ -140,14 +109,9 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
     if (onAddToCart) onAddToCart(product);
   };
 
-  const handleWishlistClick = (e, productId) => {
+  const handleWishlistClick = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-    const isCurrentlyAdded = !!wishlistItems[productId];
-    const isAddedNow = !isCurrentlyAdded;
-
-    setWishlistItems(prev => ({ ...prev, [productId]: isAddedNow }));
-    const product = trendingProducts.find(p => p.id === productId);
     if (onAddToWishlist && product) {
       onAddToWishlist(product);
     }
@@ -286,10 +250,11 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
                 className="flex flex-col items-center gap-2 cursor-pointer group"
                 onClick={() => {
                   if (category.isViewAll) {
-                    if (setView) setView('categories');
+                    if (setSelectedCategory) setSelectedCategory('All');
+                    if (setView) setView('gift');
                   } else {
                     if (setSelectedCategory) setSelectedCategory(category.name);
-                    if (setView) setView('categories');
+                    if (setView) setView('gift');
                   }
                 }}
               >
@@ -317,7 +282,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
               <h2 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight">Trending Now</h2>
               <button
                 onClick={() => {
-                  if (typeof setView === 'function') setView('categories');
+                  if (typeof setView === 'function') setView('gift');
                   else if (typeof onSearch === 'function') onSearch('');
                 }}
                 className="text-primary font-bold hover:underline flex items-center text-xs md:text-sm cursor-pointer"
@@ -327,18 +292,7 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
             </div>
 
             <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2 hide-scrollbar snap-x items-start">
-              {(storeProducts.length > 0 ? storeProducts.map(p => ({
-                ...p,
-                id: p.id,
-                title: p.title,
-                price: p.currentPrice || p.price,
-                originalPrice: p.originalPrice,
-                rating: `${p.rating || 4.8} (${p.reviewsCount || 12})`,
-                image: p.image || '/assets/images/products/led_photo_lamp.jpg',
-                images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : ['/assets/images/products/led_photo_lamp.jpg']),
-                inStock: p.inStock !== false,
-                deliveryText: p.deliveryText || 'Get it in 2-3 Days'
-              })) : trendingProducts).map((product) => (
+              {allCatalogProducts.slice(0, 12).map((product) => (
                 <div key={product.id} onClick={() => onOpenProduct && onOpenProduct(product)} className="w-[calc(50%-6px)] sm:w-[200px] lg:w-[calc((100%-3rem)/4)] flex-shrink-0 snap-start bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col cursor-pointer">
                   <div className="relative rounded-xl overflow-hidden mb-3 aspect-[4/3] bg-gray-100 w-full">
                     <img 
@@ -361,11 +315,15 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
                         {product.badge}
                       </span>
                     ) : null}
-                    <button onClick={(e) => handleWishlistClick(e, product.id)} className="absolute top-2 right-2 sm:top-3 sm:right-3 h-6 w-6 sm:h-8 sm:w-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-500 hover:text-secondary hover:bg-white transition-colors">
-                      {wishlistItems[product.id] ? (
-                        <FaHeart className="h-3 w-3 sm:h-4 sm:w-4 text-secondary" />
+                    <button 
+                      onClick={(e) => handleWishlistClick(e, product)} 
+                      className="absolute top-2 right-2 sm:top-3 sm:right-3 h-6 w-6 sm:h-8 sm:w-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-500 hover:text-secondary hover:bg-white transition-colors"
+                      aria-label="Toggle Wishlist"
+                    >
+                      {isProductWishlisted(product) ? (
+                        <FaHeart className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
                       ) : (
-                        <FiHeart className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <FiHeart className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 hover:text-red-500" />
                       )}
                     </button>
                   </div>
@@ -493,17 +451,216 @@ const Home = ({ onAddToCart, onAddToWishlist, onSearch, onOpenProduct, setView, 
               <p className="text-[7px] sm:text-[9px] md:text-xs text-gray-500 leading-tight">Preview your gift and place order</p>
             </div>
           </div>
-
-          {/* WhatsApp Floating Button */}
-          <button className="fixed bottom-24 md:bottom-6 right-6 h-12 w-12 bg-green-500 text-white rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.6)] hover:shadow-[0_0_25px_rgba(34,197,94,0.8)] hover:scale-110 transition-all z-50">
-            <FaWhatsapp className="h-7 w-7" />
-          </button>
         </div>
 
+        {/* Customer Reviews & Testimonials */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Customer Stories & Reviews</h2>
+              <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Real feedback from happy gift receivers</p>
+            </div>
+            <button
+              onClick={() => setView && setView('gift')}
+              className="text-primary font-bold hover:underline text-xs md:text-sm flex items-center gap-1"
+            >
+              Explore Store <FiChevronRight />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+              <div>
+                <div className="flex items-center gap-1 text-amber-400 mb-2">
+                  {'★'.repeat(5)}
+                </div>
+                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed italic mb-4">
+                  "The 3D LED lamp with our couple photo turned out breathtaking! The wooden finish is super smooth and the glow is warm and romantic. My partner was truly amazed."
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-50">
+                <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-700 font-extrabold flex items-center justify-center text-xs">
+                  AS
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900">Anjali Sharma</h4>
+                  <p className="text-[10px] text-gray-400">Verified Buyer • Heart 3D Lamp</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+              <div>
+                <div className="flex items-center gap-1 text-amber-400 mb-2">
+                  {'★'.repeat(5)}
+                </div>
+                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed italic mb-4">
+                  "Ordered a wooden collage frame for my parents' anniversary. The print resolution was razor sharp and delivery arrived 1 day ahead of schedule in pristine condition!"
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-50">
+                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-extrabold flex items-center justify-center text-xs">
+                  RS
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900">Rohan Singhal</h4>
+                  <p className="text-[10px] text-gray-400">Verified Buyer • Collage Frame</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+              <div>
+                <div className="flex items-center gap-1 text-amber-400 mb-2">
+                  {'★'.repeat(5)}
+                </div>
+                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed italic mb-4">
+                  "The customized photo cushion is so soft and fluffy! Customer support helped me preview the layout on WhatsApp before printing. 10/10 service!"
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-50">
+                <div className="w-9 h-9 rounded-full bg-pink-100 text-pink-700 font-extrabold flex items-center justify-center text-xs">
+                  MK
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900">Meera Krishnan</h4>
+                  <p className="text-[10px] text-gray-400">Verified Buyer • Photo Cushion</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Badges */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-3 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <FiTruck className="h-5 w-5" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-gray-900">Free Express Delivery</h5>
+              <p className="text-[10px] text-gray-500">On all orders above ₹999</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-3 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
+              <FiShield className="h-5 w-5" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-gray-900">100% Quality Guaranteed</h5>
+              <p className="text-[10px] text-gray-500">Laser cut & premium finish</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-3 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <FiAward className="h-5 w-5" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-gray-900">Handcrafted with Love</h5>
+              <p className="text-[10px] text-gray-500">Over 10,000+ happy clients</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-3 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <FiHeadphones className="h-5 w-5" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-gray-900">Dedicated Support</h5>
+              <p className="text-[10px] text-gray-500">Instant WhatsApp assistance</p>
+            </div>
+          </div>
+        </div>
+
+        {/* WhatsApp Floating Button */}
+        <a
+          href="https://wa.me/919123456789?text=Hi%20INEX%20Gifts%2C%20I%20want%20to%20customize%20a%20gift!"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-24 md:bottom-6 right-6 h-12 w-12 bg-green-500 text-white rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.6)] hover:shadow-[0_0_25px_rgba(34,197,94,0.8)] hover:scale-110 transition-all z-50"
+          title="Chat with us on WhatsApp"
+        >
+          <FaWhatsapp className="h-7 w-7" />
+        </a>
+
       </main>
-      <HomeScreen2 onAddToCart={onAddToCart} onAddToWishlist={onAddToWishlist} onOpenProduct={onOpenProduct} hideHeader={true} hideMobileNav={true} hideWhatsApp={true} />
+
+      {/* Clean Modern Footer */}
+      <footer className="bg-slate-900 text-slate-300 pt-12 pb-16 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-sm">
+                IN
+              </div>
+              <span className="text-lg font-extrabold text-white tracking-tight">INEX GIFTS</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Crafting unforgettable personalized gifts, engraved acrylic LED photo lamps, wooden frames, and curated celebration hampers with love.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Quick Navigation</h4>
+            <ul className="space-y-2 text-xs">
+              <li>
+                <button onClick={() => setView && setView('gift')} className="hover:text-white transition">
+                  Shop All Gifts
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setView && setView('gift')} className="hover:text-white transition">
+                  Explore Gifts & Categories
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setView && setView('orders')} className="hover:text-white transition">
+                  Track My Orders
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setView && setView('profile')} className="hover:text-white transition">
+                  My Profile & Settings
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Customer Care</h4>
+            <ul className="space-y-2 text-xs">
+              <li className="text-slate-400">WhatsApp: <span className="text-white">+91 91234 56789</span></li>
+              <li className="text-slate-400">Email: <span className="text-white">support@inexgifts.com</span></li>
+              <li className="text-slate-400">Operating Hours: <span className="text-white">9:00 AM - 9:00 PM</span></li>
+              <li className="text-slate-400">Fast 2-3 Day Express Shipping Across India</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Management</h4>
+            <ul className="space-y-2 text-xs">
+              <li>
+                <button onClick={() => setView && setView('admin-login')} className="hover:text-indigo-400 text-slate-400 transition font-mono">
+                  Admin Portal Login →
+                </button>
+              </li>
+              <li className="text-[11px] text-slate-500 pt-2">
+                Real-time Firestore Backend & Storage Powered
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2">
+          <p>© {new Date().getFullYear()} INEX Gifts Private Limited. All Rights Reserved.</p>
+          <p>Handcrafted with passion in India 🇮🇳</p>
+        </div>
+      </footer>
     </>
   );
 };
 
 export default Home;
+

@@ -173,45 +173,60 @@ const reviewSlides = [
 
 const similarProducts = [
   {
+    id: 'sim_cushion_1',
     title: 'Photo Cushion',
-    price: '₹499',
+    price: 499,
+    displayPrice: '₹499',
     rating: '4.7',
     reviews: '(189)',
     image: '/assets/cushion.png',
   },
   {
+    id: 'sim_mug_2',
     title: 'Customized Mug',
-    price: '₹299',
+    price: 299,
+    displayPrice: '₹299',
     rating: '4.6',
     reviews: '(215)',
     image: '/assets/mug.png',
   },
   {
+    id: 'sim_frame_3',
     title: 'Acrylic Photo Frame',
-    price: '₹649',
+    price: 649,
+    displayPrice: '₹649',
     rating: '4.8',
     reviews: '(158)',
     image: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=400&auto=format&fit=crop',
   },
   {
+    id: 'sim_keychain_4',
     title: 'Photo Keychain',
-    price: '₹199',
+    price: 199,
+    displayPrice: '₹199',
     rating: '4.5',
     reviews: '(86)',
     image: 'https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=400&auto=format&fit=crop',
   },
   {
+    id: 'sim_box_5',
     title: 'Explosion Gift Box',
-    price: '₹1,199',
+    price: 1199,
+    displayPrice: '₹1,199',
     rating: '4.9',
     reviews: '(120)',
     image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400&auto=format&fit=crop',
   },
 ];
 
-function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggleWishlist, onBack, onOpenCart, cartCount }) {
+function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggleWishlist, wishlistItems = [], onBack, onOpenCart, cartCount }) {
   const [quantity, setQuantity] = useState(qty || 1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const isWishlisted = useMemo(() => {
+    if (!product || !Array.isArray(wishlistItems)) return false;
+    const pid = String(product.id || '');
+    const ptitle = product.title || product.name || '';
+    return wishlistItems.some(w => (pid && String(w.id) === pid) || (ptitle && w.title === ptitle));
+  }, [product, wishlistItems]);
   const [activeTab, setActiveTab] = useState('features-section');
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [lightbox, setLightbox] = useState({ open: false, src: '', alt: '' });
@@ -278,28 +293,13 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
+  // Active tab indicator positioning
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '-30% 0px -60% 0px',
-      threshold: 0,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      if (manualScrollingRef.current) return;
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveTab(entry.target.id);
-        }
-      });
-    }, observerOptions);
-
-    Object.values(sectionRefs.current).forEach((section) => {
-      if (section) observer.observe(section);
-    });
-
-    return () => observer.disconnect();
-  }, []);
+    const activeTabButton = tabRefs.current[activeTab];
+    if (!activeTabButton || !indicatorRef.current) return;
+    indicatorRef.current.style.width = `${activeTabButton.offsetWidth}px`;
+    indicatorRef.current.style.transform = `translateX(${activeTabButton.offsetLeft}px)`;
+  }, [activeTab]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -326,44 +326,75 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
     setQuantity(Math.max(1, value));
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (customItemOrQty) => {
     if (onAddToCart) {
-      onAddToCart(quantity);
+      if (typeof customItemOrQty === 'object' && customItemOrQty !== null) {
+        onAddToCart(customItemOrQty);
+      } else {
+        const qtyToAdd = typeof customItemOrQty === 'number' ? customItemOrQty : quantity;
+        onAddToCart({ ...product, quantity: qtyToAdd });
+      }
     }
     setQuantity(1);
     setAddedFeedback(true);
   };
 
   const handleToggleWishlist = () => {
-    const nextWishlisted = !isWishlisted;
-    setIsWishlisted(nextWishlisted);
-    if (onToggleWishlist) {
-      onToggleWishlist(nextWishlisted);
+    if (onToggleWishlist && product) {
+      onToggleWishlist(product);
     }
   };
 
-  const handleSimilarWishlist = (index) => {
-    setSimilarWishlist((previous) =>
-      previous.map((isSaved, idx) => (idx === index ? !isSaved : isSaved))
-    );
+  const isSimilarWishlisted = (item) => {
+    if (!Array.isArray(wishlistItems)) return false;
+    const targetId = String(item.id || item.title);
+    return wishlistItems.some(w => String(w.id) === targetId || w.title === item.title);
   };
 
-  const scrollToSection = (id) => {
-    const section = sectionRefs.current[id];
-    const header = document.querySelector('.app-header');
-    const tabNav = document.querySelector('.tab-nav');
-    if (!section) return;
+  const handleSimilarWishlistToggle = (e, item) => {
+    e?.stopPropagation();
+    if (onToggleWishlist && item) {
+      const numericPrice = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 499;
+      onToggleWishlist({
+        id: item.id || item.title,
+        title: item.title,
+        price: numericPrice,
+        currentPrice: numericPrice,
+        originalPrice: Math.round(numericPrice * 1.25),
+        image: item.image,
+        subtitle: 'Personalized Gift'
+      });
+    }
+  };
 
-    manualScrollingRef.current = true;
+  const handleSimilarAddToCart = (e, item) => {
+    e?.stopPropagation();
+    if (onAddToCart && item) {
+      const numericPrice = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 499;
+      onAddToCart({
+        id: item.id || item.title,
+        title: item.title,
+        price: numericPrice,
+        currentPrice: numericPrice,
+        originalPrice: Math.round(numericPrice * 1.25),
+        image: item.image,
+        quantity: 1,
+        subtitle: 'Personalized Gift'
+      });
+    }
+  };
+
+  const handleTabClick = (id) => {
     setActiveTab(id);
-
-    const offsetTop = section.getBoundingClientRect().top + window.scrollY;
-    const offset = (header?.offsetHeight || 0) + (tabNav?.offsetHeight || 0) + 8;
-    window.scrollTo({ top: offsetTop - offset, behavior: 'smooth' });
-
-    window.setTimeout(() => {
-      manualScrollingRef.current = false;
-    }, 900);
+    const tabNav = document.querySelector('.tab-nav');
+    if (tabNav) {
+      const header = document.querySelector('.app-header');
+      const offsetTop = tabNav.getBoundingClientRect().top + window.scrollY;
+      const offset = (header?.offsetHeight || 0) + 4;
+      if (window.scrollY > offsetTop) {
+        window.scrollTo({ top: offsetTop - offset, behavior: 'smooth' });
+      }
+    }
   };
 
   const openLightbox = (src, alt) => {
@@ -380,7 +411,7 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
         <button className="header-btn" aria-label="Go back" onClick={() => onBack && onBack()}>
           <ArrowLeft size={20} />
         </button>
-        <h1 className="header-title">LED Photo Lamp</h1>
+        <h1 className="header-title truncate max-w-[200px] sm:max-w-md">{product?.title || 'Product Details'}</h1>
         <div className="header-actions">
           <button className="header-btn wishlist-btn" aria-label="Add to wishlist" onClick={handleToggleWishlist}>
             <Heart
@@ -405,6 +436,10 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
         qty={quantity}
         setQty={setQuantity}
         onAddToCart={handleAddToCart}
+        onBuyNow={(customOrQty) => {
+          handleAddToCart(customOrQty);
+          if (onOpenCart) onOpenCart();
+        }}
         hideBottomBar={true}
       />
 
@@ -414,7 +449,7 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
             key={tab.id}
             type="button"
             className={`tab-item ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => scrollToSection(tab.id)}
+            onClick={() => handleTabClick(tab.id)}
             ref={(element) => {
               tabRefs.current[tab.id] = element;
             }}
@@ -426,216 +461,242 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
       </nav>
 
       <main className="main-content">
-
-        <section id="features-section" className="scroll-section" ref={(el) => (sectionRefs.current['features-section'] = el)}>
-          <div className="section-title-wrapper">
-            <Heart className="title-heart-icon" size={20} />
-            <h2 className="section-title">Why You'll Love It</h2>
-          </div>
-          <div className="features-grid">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div className="feature-card" key={feature.label}>
-                  <div className={`feature-icon-wrapper ${feature.className}`}>
-                    <Icon size={20} />
+        {activeTab === 'features-section' && (
+          <section id="features-section" className="scroll-section animate-in fade-in duration-200">
+            <div className="section-title-wrapper">
+              <Heart className="title-heart-icon" size={20} />
+              <h2 className="section-title">Why You'll Love It</h2>
+            </div>
+            <div className="features-grid">
+              {features.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div className="feature-card" key={feature.label}>
+                    <div className={`feature-icon-wrapper ${feature.className}`}>
+                      <Icon size={20} />
+                    </div>
+                    <p className="feature-text">{feature.label}</p>
                   </div>
-                  <p className="feature-text">{feature.label}</p>
+                );
+              })}
+            </div>
+            <div className="promo-box">
+              <div className="promo-left">
+                <div className="promo-lightbulb">
+                  <Lightbulb size={18} />
                 </div>
-              );
-            })}
-          </div>
-          <div className="promo-box">
-            <div className="promo-left">
-              <div className="promo-lightbulb">
-                <Lightbulb size={18} />
+                <p className="promo-text">
+                  Perfect to surprise your loved ones on birthdays, anniversaries, valentine's day and other special occasions.
+                </p>
               </div>
-              <p className="promo-text">
-                Perfect to surprise your loved ones on birthdays, anniversaries, valentine's day and other special occasions.
-              </p>
+              <div className="promo-right">
+                <img src="/assets/purple_giftbox.png" alt="Gift box with ribbon" className="promo-img" />
+              </div>
             </div>
-            <div className="promo-right">
-              <img src="/assets/purple_giftbox.png" alt="Gift box with ribbon" className="promo-img" />
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <section id="details-section" className="scroll-section" ref={(el) => (sectionRefs.current['details-section'] = el)}>
-          <div className="section-title-wrapper border-top">
-            <h2 className="section-title-plain">Product Details</h2>
-          </div>
-          <div className="details-grid">
-            {detailsColumns.map((column, index) => (
-              <div className="details-column" key={index}>
-                <ul>
-                  {column.map((item) => (
-                    <li key={item.label}>
-                      <span className="detail-label">{item.label}</span>
-                      <span className="detail-value">{item.value}</span>
-                    </li>
+        {activeTab === 'details-section' && (
+          <section id="details-section" className="scroll-section animate-in fade-in duration-200">
+            <div className="section-title-wrapper">
+              <h2 className="section-title-plain">Product Details</h2>
+            </div>
+            <div className="details-grid">
+              {detailsColumns.map((column, index) => (
+                <div className="details-column" key={index}>
+                  <ul>
+                    {column.map((item) => (
+                      <li key={item.label}>
+                        <span className="detail-label">{item.label}</span>
+                        <span className="detail-value">{item.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="quality-badge-box">
+              <div className="badge-icon">
+                <ShieldCheck size={16} />
+              </div>
+              <div className="badge-content">
+                <h4 className="badge-title">Quality Assured</h4>
+                <p className="badge-text">At INEX Gifts, we ensure the best quality and customer satisfaction.</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'reviews-section' && (
+          <section id="reviews-section" className="scroll-section animate-in fade-in duration-200">
+            <div className="section-title-wrapper flex-space">
+              <h2 className="section-title-plain">Customer Reviews</h2>
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                ★ 4.8 / 5.0 (320+ Reviews)
+              </span>
+            </div>
+
+            <div className="reviews-summary-row">
+              <div className="rating-overview">
+                <div className="rating-number">4.8</div>
+                <div className="rating-stars">
+                  {[...Array(5)].map((_, index) => (
+                    <Star key={index} className="star-filled" size={14} />
                   ))}
-                </ul>
+                </div>
+                <div className="rating-count">(320 Reviews)</div>
               </div>
-            ))}
-          </div>
-          <div className="quality-badge-box">
-            <div className="badge-icon">
-              <ShieldCheck size={16} />
-            </div>
-            <div className="badge-content">
-              <h4 className="badge-title">Quality Assured</h4>
-              <p className="badge-text">At INEX Gifts, we ensure the best quality and customer satisfaction.</p>
-            </div>
-          </div>
-        </section>
-
-        <section id="reviews-section" className="scroll-section" ref={(el) => (sectionRefs.current['reviews-section'] = el)}>
-          <div className="section-title-wrapper border-top flex-space">
-            <h2 className="section-title-plain">Customer Reviews</h2>
-            <a href="#" className="view-all-link">
-              View All <ChevronRight size={14} />
-            </a>
-          </div>
-
-          <div className="reviews-summary-row">
-            <div className="rating-overview">
-              <div className="rating-number">4.8</div>
-              <div className="rating-stars">
-                {[...Array(5)].map((_, index) => (
-                  <Star key={index} className="star-filled" size={14} />
+              <div className="rating-bars">
+                {ratingBars.map((bar) => (
+                  <div className="bar-row" key={bar.value}>
+                    <span className="bar-label">
+                      {bar.value} <Star size={10} />
+                    </span>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: bar.width }} />
+                    </div>
+                    <span className="bar-percent">{bar.width}</span>
+                  </div>
                 ))}
               </div>
-              <div className="rating-count">(320 Reviews)</div>
-            </div>
-            <div className="rating-bars">
-              {ratingBars.map((bar) => (
-                <div className="bar-row" key={bar.value}>
-                  <span className="bar-label">
-                    {bar.value} <Star size={10} />
-                  </span>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: bar.width }} />
+              <div className="review-photo-grid">
+                {reviewPhotos.map((photo, index) => (
+                  <div className={`rp-img-wrap ${index === reviewPhotos.length - 1 ? 'rp-more' : ''}`} key={photo + index} onClick={() => openLightbox(photo, 'Review photo')}>
+                    <img src={photo} alt="Review photo" className={`rp-img ${index === reviewPhotos.length - 1 ? 'rp-blur' : ''}`} />
+                    {index === reviewPhotos.length - 1 ? <div className="rp-overlay">+24<br />Photos</div> : null}
                   </div>
-                  <span className="bar-percent">{bar.width}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="review-photo-grid">
-              {reviewPhotos.map((photo, index) => (
-                <div className={`rp-img-wrap ${index === reviewPhotos.length - 1 ? 'rp-more' : ''}`} key={photo + index} onClick={() => openLightbox(photo, 'Review photo')}>
-                  <img src={photo} alt="Review photo" className={`rp-img ${index === reviewPhotos.length - 1 ? 'rp-blur' : ''}`} />
-                  {index === reviewPhotos.length - 1 ? <div className="rp-overlay">+24<br />Photos</div> : null}
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="review-slideshow" id="review-slideshow">
-            <div className="review-slide-wrapper" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-              {displayReviewSlides.map((review, idx) => (
-                <div className="review-slide" key={review.name + idx}>
-                  <div className="review-card">
-                    <div className="review-card-header">
-                      <div className="reviewer-info">
-                        <div className="reviewer-avatar">{review.initial}</div>
-                        <div className="reviewer-meta">
-                          <div className="reviewer-name-row">
-                            <span className="reviewer-name">{review.name}</span>
-                            <span className="verified-badge">
-                              <ShieldCheck size={10} /> Verified Buyer
-                            </span>
-                          </div>
-                          <div className="review-stars-row">
-                            <div className="review-stars">
-                              {[...Array(5)].map((_, index) => (
-                                <Star
-                                  key={index}
-                                  className={index < (review.rating || 5) ? 'star-filled' : 'text-slate-300'}
-                                  size={14}
-                                />
-                              ))}
+            <div className="review-slideshow" id="review-slideshow">
+              <div className="review-slide-wrapper" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {displayReviewSlides.map((review, idx) => (
+                  <div className="review-slide" key={review.name + idx}>
+                    <div className="review-card">
+                      <div className="review-card-header">
+                        <div className="reviewer-info">
+                          <div className="reviewer-avatar">{review.initial}</div>
+                          <div className="reviewer-meta">
+                            <div className="reviewer-name-row">
+                              <span className="reviewer-name">{review.name}</span>
+                              <span className="verified-badge">
+                                <ShieldCheck size={10} /> Verified Buyer
+                              </span>
+                            </div>
+                            <div className="review-stars-row">
+                              <div className="review-stars">
+                                {[...Array(5)].map((_, index) => (
+                                  <Star
+                                    key={index}
+                                    className={index < (review.rating || 5) ? 'star-filled' : 'text-slate-300'}
+                                    size={14}
+                                  />
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <div className="review-date">{review.date}</div>
                       </div>
-                      <div className="review-date">{review.date}</div>
-                    </div>
-                    <div className="review-body">
-                      <p className="review-text">{review.text}</p>
-                      {review.photo && (
-                        <img
-                          src={review.photo}
-                          alt={`${review.name}'s review photo`}
-                          className="review-thumb-img"
-                          onClick={() => openLightbox(review.photo, `${review.name} review photo`)}
-                        />
-                      )}
+                      <div className="review-body">
+                        <p className="review-text">{review.text}</p>
+                        {review.photo && (
+                          <img
+                            src={review.photo}
+                            alt={`${review.name}'s review photo`}
+                            className="review-thumb-img"
+                            onClick={() => openLightbox(review.photo, `${review.name} review photo`)}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            <button className="slide-arrow slide-arrow-prev" type="button" id="slide-prev" aria-label="Previous review" onClick={() => setCurrentSlide((prev) => (prev - 1 + displayReviewSlides.length) % displayReviewSlides.length)}>
-              <ChevronLeft size={16} />
-            </button>
-            <button className="slide-arrow slide-arrow-next" type="button" id="slide-next" aria-label="Next review" onClick={() => setCurrentSlide((prev) => (prev + 1) % displayReviewSlides.length)}>
-              <ChevronRight size={16} />
-            </button>
-            <div className="carousel-dots" id="carousel-dots">
-              {displayReviewSlides.map((_, index) => (
-                <span
-                  key={index}
-                  className={`dot ${currentSlide === index ? 'active' : ''}`}
-                  data-index={index}
-                  onClick={() => setCurrentSlide(index)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="similar-section" className="scroll-section" ref={(el) => (sectionRefs.current['similar-section'] = el)}>
-          <div className="section-title-wrapper border-top flex-space">
-            <h2 className="section-title-plain">Similar Products</h2>
-            <a href="#" className="view-all-link">
-              View All <ChevronRight size={14} />
-            </a>
-          </div>
-          <div className="similar-slider">
-            {similarProducts.map((product, index) => (
-              <div className="product-card" key={product.title}>
-                <div className="card-img-container">
-                  <img 
-                    src={product.image} 
-                    alt={product.title} 
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
-                    }}
-                    className="card-img" 
-                  />
-                  <button className="card-wishlist" type="button" aria-label="Add to wishlist" onClick={() => handleSimilarWishlist(index)}>
-                    <Heart
-                      fill={similarWishlist[index] ? '#EF4444' : 'none'}
-                      stroke={similarWishlist[index] ? '#EF4444' : 'currentColor'}
-                      size={14}
-                    />
-                  </button>
-                </div>
-                <div className="card-info">
-                  <h3 className="card-title">{product.title}</h3>
-                  <div className="card-price">{product.price}</div>
-                  <div className="card-rating">
-                    <Star className="star-filled" size={10} />
-                    <span className="rating-val">{product.rating}</span>
-                    <span className="rating-count">{product.reviews}</span>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+
+              <button className="slide-arrow slide-arrow-prev" type="button" id="slide-prev" aria-label="Previous review" onClick={() => setCurrentSlide((prev) => (prev - 1 + displayReviewSlides.length) % displayReviewSlides.length)}>
+                <ChevronLeft size={16} />
+              </button>
+              <button className="slide-arrow slide-arrow-next" type="button" id="slide-next" aria-label="Next review" onClick={() => setCurrentSlide((prev) => (prev + 1) % displayReviewSlides.length)}>
+                <ChevronRight size={16} />
+              </button>
+              <div className="carousel-dots" id="carousel-dots">
+                {displayReviewSlides.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`dot ${currentSlide === index ? 'active' : ''}`}
+                    data-index={index}
+                    onClick={() => setCurrentSlide(index)}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'similar-section' && (
+          <section id="similar-section" className="scroll-section animate-in fade-in duration-200">
+            <div className="section-title-wrapper flex-space">
+              <h2 className="section-title-plain">Similar Products</h2>
+            </div>
+            <div className="similar-slider">
+              {similarProducts.map((p) => {
+                const isWish = isSimilarWishlisted(p);
+                return (
+                  <div className="product-card flex flex-col justify-between" key={p.id || p.title}>
+                    <div>
+                      <div className="card-img-container">
+                        <img 
+                          src={p.image} 
+                          alt={p.title} 
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500';
+                          }}
+                          className="card-img" 
+                        />
+                        <button 
+                          className="card-wishlist" 
+                          type="button" 
+                          aria-label={isWish ? "Remove from wishlist" : "Add to wishlist"} 
+                          onClick={(e) => handleSimilarWishlistToggle(e, p)}
+                          title={isWish ? "Remove from Wishlist" : "Add to Wishlist"}
+                        >
+                          <Heart
+                            fill={isWish ? '#EF4444' : 'none'}
+                            stroke={isWish ? '#EF4444' : '#64748B'}
+                            size={14}
+                          />
+                        </button>
+                      </div>
+                      <div className="card-info pb-1">
+                        <h3 className="card-title truncate">{p.title}</h3>
+                        <div className="card-price font-extrabold text-indigo-900">{p.displayPrice || `₹${p.price}`}</div>
+                        <div className="card-rating">
+                          <Star className="star-filled" size={10} />
+                          <span className="rating-val">{p.rating}</span>
+                          <span className="rating-count">{p.reviews}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-2 pb-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => handleSimilarAddToCart(e, p)}
+                        className="w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-600 active:scale-[0.98] text-indigo-700 hover:text-white font-extrabold text-xs rounded-xl border border-indigo-200 hover:border-transparent transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <ShoppingCart size={13} />
+                        <span>Add to Cart</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="app-footer sticky bottom-0 z-50 bg-white border-t border-slate-200 shadow-2xl py-3.5 px-4 sm:px-8 flex items-center justify-between gap-4">
@@ -658,9 +719,25 @@ function ProductDetails({ product, showToast, qty, setQty, onAddToCart, onToggle
               +
             </button>
           </div>
-          <button className="add-to-cart-btn bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 text-sm cursor-pointer" type="button" id="add-to-cart-action" onClick={handleAddToCart}>
+          <button
+            disabled={product?.inStock === false}
+            className={`add-to-cart-btn font-extrabold px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-sm ${
+              product?.inStock === false
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white shadow-lg shadow-indigo-600/30 cursor-pointer'
+            }`}
+            type="button"
+            id="add-to-cart-action"
+            onClick={handleAddToCart}
+          >
             <ShoppingCart className="btn-cart-icon" size={18} />
-            <span>{addedFeedback ? '✓ Added to Cart!' : 'Add to Cart'}</span>
+            <span>
+              {product?.inStock === false
+                ? 'Out of Stock ✕'
+                : addedFeedback
+                  ? '✓ Added to Cart!'
+                  : 'Add to Cart'}
+            </span>
           </button>
         </div>
       </footer>

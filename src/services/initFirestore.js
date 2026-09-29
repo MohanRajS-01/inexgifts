@@ -95,26 +95,37 @@ const DEFAULT_PRODUCTS = [
   }
 ];
 
+import { collection, getDocs } from 'firebase/firestore';
+
 export const initFirestoreDatabase = async () => {
   try {
-    // 1. Seed Users Collection
-    for (const u of DEFAULT_USERS) {
-      const docId = u.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
-      await setDoc(doc(db, 'users', docId), u, { merge: true });
+    // 1. Seed Users Collection if empty
+    const usersSnap = await getDocs(collection(db, 'users'));
+    if (usersSnap.empty) {
+      for (const u of DEFAULT_USERS) {
+        const docId = u.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
+        await setDoc(doc(db, 'users', docId), u, { merge: true });
+      }
     }
 
-    // 2. Seed Banners Collection
-    for (const b of DEFAULT_BANNERS) {
-      await setDoc(doc(db, 'banners', b.id), b, { merge: true });
+    // 2. Seed Banners Collection if empty
+    const bannersSnap = await getDocs(collection(db, 'banners'));
+    if (bannersSnap.empty) {
+      for (const b of DEFAULT_BANNERS) {
+        await setDoc(doc(db, 'banners', b.id), b, { merge: true });
+      }
     }
 
-    // 3. Seed Products Collection
-    for (const p of DEFAULT_PRODUCTS) {
-      await setDoc(doc(db, 'products', p.id), p, { merge: true });
+    // 3. Seed Products Collection only if empty
+    const prodsSnap = await getDocs(collection(db, 'products'));
+    if (prodsSnap.empty) {
+      for (const p of DEFAULT_PRODUCTS) {
+        await setDoc(doc(db, 'products', p.id), p, { merge: true });
+      }
     }
 
-    console.log("⚡ Firestore collections (users, banners, products) initialized!");
+    console.log("⚡ Firestore database verified (admin products preserved)!");
   } catch (err) {
-    console.error("Firestore initialization notice:", err);
+    console.warn("Firestore initialization notice:", err.message);
   }
 };

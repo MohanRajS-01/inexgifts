@@ -10,6 +10,7 @@ export default function Wishlist({ wishlistItems, setWishlistItems, cartItems, s
       wishlistItems={wishlistItems}
       setWishlistItems={setWishlistItems}
       onBack={() => setView('home1')}
+      setView={setView}
     />
   );
 }

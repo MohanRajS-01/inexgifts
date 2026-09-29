@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { productsData } from '../../data/products';
+import { productService } from '../../services/productService';
 import './Search.css';
 
 export default function Search({
@@ -1538,8 +1539,43 @@ export function SearchScreen({
     setFilters(prev => ({ ...prev, [id]: value }));
   };
 
+  const [storeProducts, setStoreProducts] = useState([]);
+
+  useEffect(() => {
+    const unsub = productService.subscribeProducts((prods) => {
+      if (prods && prods.length > 0) {
+        setStoreProducts(prods);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const allSearchableProducts = useMemo(() => {
+    if (storeProducts && storeProducts.length > 0) {
+      const mapped = storeProducts.map(p => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'Gifts',
+        price: p.currentPrice || p.price,
+        originalPrice: p.originalPrice || Math.round((p.currentPrice || 999) * 1.25),
+        rating: p.rating || 4.8,
+        reviewsCount: p.reviewsCount || 12,
+        image: p.image || '/assets/images/products/led_photo_lamp.jpg',
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : ['/assets/images/products/led_photo_lamp.jpg']),
+        inStock: p.inStock !== false,
+        deliveryText: p.deliveryText || 'Get it in 2-3 Days',
+        discountPercent: p.originalPrice ? Math.round(((p.originalPrice - (p.currentPrice || p.price)) / p.originalPrice) * 100) : 20,
+        popularity: p.popularity || 85
+      }));
+      const setIds = new Set(mapped.map(m => String(m.id)));
+      const remainder = productsData.filter(pd => !setIds.has(String(pd.id)));
+      return [...mapped, ...remainder];
+    }
+    return productsData;
+  }, [storeProducts]);
+
   const filteredProducts = useMemo(() => {
-    let result = productsData;
+    let result = allSearchableProducts;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p => p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
@@ -1558,7 +1594,7 @@ export function SearchScreen({
     else if (currentSort === 'rating') result = [...result].sort((a, b) => b.rating - a.rating);
     else if (currentSort === 'popularity') result = [...result].sort((a, b) => b.popularity - a.popularity);
     return result;
-  }, [searchQuery, activeCategory, filters, currentSort]);
+  }, [allSearchableProducts, searchQuery, activeCategory, filters, currentSort]);
 
   return (
     <div className="main-container-inner">

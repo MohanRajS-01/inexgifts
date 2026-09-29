@@ -6,16 +6,16 @@ import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  FiImage, 
-  FiShoppingBag, 
-  FiPlus, 
-  FiTrash2, 
-  FiEdit, 
-  FiCheckCircle, 
-  FiLogOut, 
-  FiHome, 
-  FiRefreshCw, 
+import {
+  FiImage,
+  FiShoppingBag,
+  FiPlus,
+  FiTrash2,
+  FiEdit,
+  FiCheckCircle,
+  FiLogOut,
+  FiHome,
+  FiRefreshCw,
   FiLayers,
   FiEye,
   FiZap,
@@ -24,8 +24,14 @@ import {
   FiFolderPlus,
   FiX,
   FiUsers,
-  FiSearch
+  FiSearch,
+  FiUploadCloud,
+  FiUpload,
+  FiLoader,
+  FiStar,
+  FiExternalLink
 } from 'react-icons/fi';
+import { uploadImageToFirebase, uploadMultipleImagesToFirebase } from '../../services/storageService';
 
 export default function AdminDashboard({ setView }) {
   const { logout } = useAuth();
@@ -59,6 +65,15 @@ export default function AdminDashboard({ setView }) {
     currentPrice: 1499,
     image: '/assets/images/products/led_photo_lamp.jpg'
   });
+
+  // Product Image Upload States
+  const [isUploadingProduct, setIsUploadingProduct] = useState(false);
+  const [productUploadProgress, setProductUploadProgress] = useState(0);
+  const [productUploadStatus, setProductUploadStatus] = useState('');
+
+  // Banner Image Upload States
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [bannerUploadProgress, setBannerUploadProgress] = useState(0);
 
   // Category State
   const [categories, setCategories] = useState([]);
@@ -236,11 +251,13 @@ export default function AdminDashboard({ setView }) {
       category: categories[0] || 'LED Lamps',
       originalPrice: 1999,
       currentPrice: 1499,
-      image: '/assets/images/products/led_photo_lamp.jpg',
-      images: ['/assets/images/products/led_photo_lamp.jpg'],
+      image: '',
+      images: [],
       inStock: true,
       deliveryText: 'Get it in 2-3 Business Days'
     });
+    setIsUploadingProduct(false);
+    setProductUploadProgress(0);
     setShowCustomCatInput(false);
     setShowProductForm(true);
   };
@@ -256,13 +273,125 @@ export default function AdminDashboard({ setView }) {
       category: p.category || 'LED Lamps',
       originalPrice: p.originalPrice || Math.round((p.currentPrice || 999) * 1.25),
       currentPrice: p.currentPrice || 999,
-      image: p.image || '/assets/images/products/led_photo_lamp.jpg',
-      images: existingImages.length > 0 ? existingImages : ['/assets/images/products/led_photo_lamp.jpg'],
+      image: p.image || existingImages[0] || '',
+      images: existingImages,
       inStock: p.inStock !== false,
       deliveryText: p.deliveryText || 'Get it in 2-3 Business Days'
     });
+    setIsUploadingProduct(false);
+    setProductUploadProgress(0);
     setShowCustomCatInput(false);
     setShowProductForm(true);
+  };
+
+  // Upload multiple images or single image to Firebase Storage for Product
+  const handleProductImageFilesUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingProduct(true);
+    setProductUploadProgress(0);
+    setProductUploadStatus(`Uploading ${files.length} image(s) to Firebase Storage...`);
+
+    try {
+      const uploadResults = await uploadMultipleImagesToFirebase(files, {
+        folder: 'products',
+        onProgress: (percent) => setProductUploadProgress(percent)
+      });
+
+      const newUrls = uploadResults.map(r => r.url).filter(Boolean);
+
+      setProductForm(prev => {
+        const existing = (prev.images || []).filter(img => typeof img === 'string' && img.trim() !== '');
+        const combined = [...existing, ...newUrls];
+        return {
+          ...prev,
+          image: combined[0] || '',
+          images: combined
+        };
+      });
+
+      showNotification(`⚡ Uploaded ${newUrls.length} image(s) directly to Firebase Storage!`);
+    } catch (err) {
+      console.error("Firebase Storage product image upload error:", err);
+      showNotification(`⚠️ Upload error: ${err.message || 'Failed to upload'}`);
+    } finally {
+      setIsUploadingProduct(false);
+      setProductUploadProgress(0);
+      setProductUploadStatus('');
+    }
+  };
+
+  // Replace a single image at index
+  const handleReplaceProductImageAt = async (index, file) => {
+    if (!file) return;
+    setIsUploadingProduct(true);
+    setProductUploadProgress(0);
+    setProductUploadStatus(`Uploading replacement image to Firebase Storage...`);
+
+    try {
+      const res = await uploadImageToFirebase(file, {
+        folder: 'products',
+        onProgress: (percent) => setProductUploadProgress(percent)
+      });
+
+      if (res && res.url) {
+        setProductForm(prev => {
+          const updated = [...(prev.images || [])];
+          updated[index] = res.url;
+          return {
+            ...prev,
+            image: index === 0 ? res.url : (prev.image || updated[0]),
+            images: updated
+          };
+        });
+        showNotification(`⚡ Image #${index + 1} updated with Firebase Storage URL!`);
+      }
+    } catch (err) {
+      console.error("Firebase Storage image replace error:", err);
+      showNotification(`⚠️ Replace failed: ${err.message}`);
+    } finally {
+      setIsUploadingProduct(false);
+      setProductUploadProgress(0);
+      setProductUploadStatus('');
+    }
+  };
+
+  // Set an image as primary cover
+  const handleMakeCoverImage = (index) => {
+    if (index === 0) return;
+    setProductForm(prev => {
+      const current = [...(prev.images || [])];
+      const selected = current.splice(index, 1)[0];
+      const reordered = [selected, ...current];
+      return {
+        ...prev,
+        image: selected,
+        images: reordered
+      };
+    });
+    showNotification("★ Set as primary cover image!");
+  };
+
+  // Banner image upload to Firebase Storage
+  const handleBannerImageUpload = async (file) => {
+    if (!file) return;
+    setIsUploadingBanner(true);
+    setBannerUploadProgress(0);
+    try {
+      const res = await uploadImageToFirebase(file, {
+        folder: 'banners',
+        onProgress: (percent) => setBannerUploadProgress(percent)
+      });
+      if (res && res.url) {
+        setBannerForm(prev => ({ ...prev, image: res.url }));
+        showNotification("⚡ Banner image uploaded to Firebase Storage!");
+      }
+    } catch (err) {
+      console.error("Banner upload error:", err);
+      showNotification(`⚠️ Banner upload notice: ${err.message}`);
+    } finally {
+      setIsUploadingBanner(false);
+      setBannerUploadProgress(0);
+    }
   };
 
   const handleAddImageField = () => {
@@ -290,7 +419,7 @@ export default function AdminDashboard({ setView }) {
       return {
         ...prev,
         image: updated[0] || '',
-        images: updated.length > 0 ? updated : ['']
+        images: updated.length > 0 ? updated : []
       };
     });
   };
@@ -460,7 +589,7 @@ export default function AdminDashboard({ setView }) {
 
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        
+
         {/* Overview Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex flex-col">
@@ -492,55 +621,50 @@ export default function AdminDashboard({ setView }) {
         <div className="flex flex-wrap border-b border-slate-700 mb-6 gap-2">
           <button
             onClick={() => setActiveTab('banners')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'banners'
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'banners'
                 ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <FiImage className="h-4 w-4" /> Home Banners ({banners.length})
           </button>
 
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'orders'
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'orders'
                 ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <FiShoppingBag className="h-4 w-4" /> Customer Orders ({(orders || []).length})
           </button>
 
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'products'
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'products'
                 ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <FiBox className="h-4 w-4" /> Manage Products ({(products || []).length})
           </button>
 
           <button
             onClick={() => setActiveTab('coupons')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'coupons'
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'coupons'
                 ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <FiTag className="h-4 w-4" /> Manage Coupons ({(coupons || []).length})
           </button>
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'users'
+            className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'users'
                 ? 'border-indigo-500 text-indigo-400 bg-slate-800/50 rounded-t-xl'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <FiUsers className="h-4 w-4" /> Registered Users ({(users || []).length})
           </button>
@@ -634,15 +758,45 @@ export default function AdminDashboard({ setView }) {
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-300 font-semibold block mb-1">Image Path / URL</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs text-slate-300 font-semibold block">Image Path / URL</label>
+                        <label className="text-[11px] font-extrabold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer">
+                          {isUploadingBanner ? (
+                            <span className="flex items-center gap-1">
+                              <FiLoader className="h-3 w-3 animate-spin" /> Uploading {bannerUploadProgress}%
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <FiUpload className="h-3 w-3" /> Upload to Firebase
+                            </span>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingBanner}
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleBannerImageUpload(e.target.files[0]);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
                       <input
                         type="text"
                         required
                         value={bannerForm.image}
                         onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })}
-                        placeholder="e.g. /Banner1.png or image URL"
+                        placeholder="e.g. /Banner1.png or Firebase Storage URL"
                         className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-mono"
                       />
+                      {bannerForm.image && (
+                        <div className="mt-2 h-24 rounded-xl overflow-hidden border border-slate-700 relative bg-slate-800">
+                          <img src={bannerForm.image} alt="Banner Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
@@ -670,14 +824,14 @@ export default function AdminDashboard({ setView }) {
               {(banners || []).map((b, idx) => (
                 <div key={b.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg flex flex-col">
                   <div className="relative h-44 bg-slate-800 overflow-hidden">
-                    <img 
-                      src={b.image} 
-                      alt={b.title} 
+                    <img
+                      src={b.image}
+                      alt={b.title}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800';
-                      }} 
-                      className="w-full h-full object-cover" 
+                      }}
+                      className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
                     <span className="absolute top-3 left-3 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow">
@@ -741,11 +895,10 @@ export default function AdminDashboard({ setView }) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
                         <span className="font-extrabold text-white text-base">{ord.id}</span>
-                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
-                          ord.status === 'Delivered' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                          ord.status === 'Shipped' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                          'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                        }`}>
+                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${ord.status === 'Delivered' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                            ord.status === 'Shipped' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                              'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          }`}>
                           {ord.status}
                         </span>
                       </div>
@@ -807,17 +960,34 @@ export default function AdminDashboard({ setView }) {
             {/* Product Form Modal */}
             {showProductForm && (
               <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-extrabold text-white">
-                      {editingProduct ? '✏️ Edit Product Details & Price' : '➕ Add New Product to Firestore'}
-                    </h4>
-                    <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                      ID: {productForm.id}
-                    </span>
+                <div className="bg-slate-900 border border-slate-700 rounded-3xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                        <FiBox className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-extrabold text-white">
+                          {editingProduct ? '✏️ Edit Product Details & Images' : '➕ Add New Product to Firestore'}
+                        </h4>
+                        <p className="text-[11px] text-slate-400">Upload images to Firebase & manage catalog item</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                        ID: {productForm.id}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowProductForm(false)}
+                        className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                      >
+                        <FiX className="h-5 w-5" />
+                      </button>
+                    </div>
                   </div>
 
-                  <form onSubmit={handleSaveProductSubmit} className="space-y-3">
+                  <form onSubmit={handleSaveProductSubmit} className="space-y-4">
                     <div>
                       <label className="text-xs text-slate-300 font-semibold block mb-1">Product Title</label>
                       <input
@@ -825,7 +995,7 @@ export default function AdminDashboard({ setView }) {
                         required
                         value={productForm.title}
                         onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
-                        placeholder="e.g. Personalized Photo Lamp"
+                        placeholder="e.g. Personalized Wooden Photo Lamp"
                         className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-3 outline-none focus:border-indigo-500 font-medium"
                       />
                     </div>
@@ -949,47 +1119,218 @@ export default function AdminDashboard({ setView }) {
                       </div>
                     </div>
 
-                    {/* Multiple Product Images UI */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs text-slate-300 font-semibold block">Product Images ({productForm.images?.length || 1})</label>
+                    {/* Firebase Storage Product Image Uploader Section */}
+                    <div className="space-y-3 p-4 bg-slate-800/60 rounded-2xl border border-slate-700/80">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs text-white font-bold flex items-center gap-1.5">
+                            <FiImage className="text-indigo-400" /> Product Images ({productForm.images?.filter(Boolean).length || 0})
+                          </label>
+                          <p className="text-[10px] text-slate-400">Upload image files directly to Firebase Storage & save download URLs</p>
+                        </div>
                         <button
                           type="button"
                           onClick={handleAddImageField}
-                          className="text-[11px] font-extrabold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                          className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg border border-indigo-500/20 transition"
                         >
-                          <FiPlus className="h-3 w-3" /> + Add Image URL
+                          <FiPlus className="h-3 w-3" /> Add URL Field
                         </button>
                       </div>
 
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {(productForm.images || [productForm.image || '']).map((imgUrl, imgIdx) => (
-                          <div key={imgIdx} className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 w-14 shrink-0">
-                              {imgIdx === 0 ? 'Cover ★' : `Img #${imgIdx + 1}`}
-                            </span>
-                            <input
-                              type="text"
-                              required={imgIdx === 0}
-                              value={imgUrl}
-                              onChange={(e) => handleImageFieldChange(imgIdx, e.target.value)}
-                              placeholder={imgIdx === 0 ? "Cover Image URL (e.g. /assets/images/product.jpg)" : "Additional Gallery Image URL"}
-                              className="flex-1 bg-slate-800 border border-slate-700 text-white text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 font-mono"
-                            />
-                            {imgIdx > 0 && (
+                      {/* Drag & Drop / Click Upload Area */}
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                            handleProductImageFilesUpload(e.dataTransfer.files);
+                          }
+                        }}
+                        className={`relative border-2 border-dashed rounded-2xl p-4 sm:p-5 text-center transition flex flex-col items-center justify-center cursor-pointer ${
+                          isUploadingProduct
+                            ? 'border-indigo-500 bg-indigo-500/10 pointer-events-none'
+                            : 'border-slate-600 hover:border-indigo-400 bg-slate-900/60 hover:bg-slate-900/90'
+                        }`}
+                        onClick={() => {
+                          if (!isUploadingProduct) {
+                            document.getElementById('product-file-upload-input')?.click();
+                          }
+                        }}
+                      >
+                        <input
+                          id="product-file-upload-input"
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              handleProductImageFilesUpload(e.target.files);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+
+                        {isUploadingProduct ? (
+                          <div className="space-y-2 py-2 w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
+                            <FiLoader className="h-8 w-8 text-indigo-400 animate-spin mx-auto" />
+                            <p className="text-xs font-bold text-indigo-300">{productUploadStatus || 'Saving image to Firebase...'}</p>
+                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                              <div
+                                className="bg-gradient-to-r from-indigo-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${productUploadProgress}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                              <span>{productUploadProgress}% complete</span>
                               <button
                                 type="button"
-                                onClick={() => handleRemoveImageField(imgIdx)}
-                                className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl transition"
-                                title="Remove Image"
+                                onClick={() => {
+                                  setIsUploadingProduct(false);
+                                  setProductUploadProgress(0);
+                                }}
+                                className="text-red-400 hover:text-red-300 font-semibold underline cursor-pointer"
                               >
-                                <FiTrash2 className="h-3.5 w-3.5" />
+                                Cancel
                               </button>
-                            )}
+                            </div>
                           </div>
-                        ))}
+                        ) : (
+                          <div className="space-y-1.5 pointer-events-none">
+                            <div className="w-10 h-10 mx-auto rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+                              <FiUploadCloud className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white">
+                                <span className="text-indigo-400 underline">Click to upload image</span> or drag & drop files
+                              </p>
+                              <p className="text-[10px] text-slate-400">PNG, JPG, WEBP, GIF (Saved as URL in Firebase)</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">If only 1 image URL is provided, customers will see only 1 image (no extra fake thumbnails).</p>
+
+                      {/* Image Gallery & Previews */}
+                      {productForm.images && productForm.images.length > 0 && (
+                        <div className="space-y-2.5 pt-1">
+                          <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+                            <span>Product Gallery ({productForm.images.length})</span>
+                            <span className="text-[10px] text-indigo-300">First image is the primary cover photo</span>
+                          </div>
+
+                          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            {productForm.images.map((imgUrl, imgIdx) => {
+                              const isCover = imgIdx === 0;
+                              return (
+                                <div
+                                  key={imgIdx}
+                                  className={`p-2.5 rounded-xl border flex items-center gap-3 transition ${
+                                    isCover ? 'bg-indigo-950/40 border-indigo-500/40' : 'bg-slate-900 border-slate-700/80'
+                                  }`}
+                                >
+                                  {/* Thumbnail Preview */}
+                                  <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center">
+                                    {imgUrl ? (
+                                      <img
+                                        src={imgUrl}
+                                        alt={`Preview ${imgIdx}`}
+                                        onError={(e) => {
+                                          e.target.onerror = null;
+                                          e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=200';
+                                        }}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <FiImage className="text-slate-500 h-5 w-5" />
+                                    )}
+                                    {isCover && (
+                                      <span className="absolute bottom-0 inset-x-0 bg-indigo-600 text-white text-[8px] font-extrabold text-center py-0.5">
+                                        COVER
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* URL Input & Actions */}
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="text-[10px] font-bold text-slate-300 flex items-center gap-1">
+                                        {isCover ? (
+                                          <span className="text-amber-400 flex items-center gap-1"><FiStar className="h-3 w-3 fill-amber-400" /> Primary Cover Image</span>
+                                        ) : (
+                                          `Gallery Image #${imgIdx + 1}`
+                                        )}
+                                      </span>
+                                      <div className="flex items-center gap-1.5">
+                                        {!isCover && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMakeCoverImage(imgIdx)}
+                                            className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold px-2 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition"
+                                          >
+                                            Set as Cover
+                                          </button>
+                                        )}
+                                        {imgUrl && imgUrl.startsWith('http') && (
+                                          <a
+                                            href={imgUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[10px] text-slate-400 hover:text-white flex items-center gap-0.5"
+                                            title="Open image in new tab"
+                                          >
+                                            <FiExternalLink className="h-3 w-3" />
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="text"
+                                        required={isCover}
+                                        value={imgUrl}
+                                        onChange={(e) => handleImageFieldChange(imgIdx, e.target.value)}
+                                        placeholder={isCover ? "Cover Image URL or upload above" : "Additional gallery image URL"}
+                                        className="flex-1 bg-slate-800 border border-slate-700 text-white text-[11px] rounded-lg p-2 outline-none focus:border-indigo-500 font-mono truncate"
+                                      />
+
+                                      {/* Single slot replace button */}
+                                      <label
+                                        className="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-indigo-300 rounded-lg cursor-pointer border border-slate-700 transition shrink-0"
+                                        title="Replace this image with file from device"
+                                      >
+                                        <FiUpload className="h-3.5 w-3.5" />
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                              handleReplaceProductImageAt(imgIdx, e.target.files[0]);
+                                              e.target.value = '';
+                                            }
+                                          }}
+                                        />
+                                      </label>
+
+                                      {/* Remove button */}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveImageField(imgIdx)}
+                                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition border border-red-500/20 shrink-0"
+                                        title="Remove Image"
+                                      >
+                                        <FiTrash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-slate-400">All image URLs are stored directly in Firestore when saving this product.</p>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
@@ -1002,8 +1343,10 @@ export default function AdminDashboard({ setView }) {
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
+                        disabled={isUploadingProduct}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 disabled:opacity-50 flex items-center gap-2"
                       >
+                        {isUploadingProduct && <FiLoader className="h-3.5 w-3.5 animate-spin" />}
                         {editingProduct ? 'Update Product Details ✓' : 'Save Product to Firestore ✓'}
                       </button>
                     </div>
@@ -1017,14 +1360,14 @@ export default function AdminDashboard({ setView }) {
               {products.map((p) => (
                 <div key={p.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-md">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img 
-                      src={p.image} 
-                      alt={p.title} 
+                    <img
+                      src={p.image}
+                      alt={p.title}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=400';
-                      }} 
-                      className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0" 
+                      }}
+                      className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0"
                     />
                     <div className="min-w-0 space-y-0.5">
                       <h4 className="text-xs font-bold text-white truncate">{p.title}</h4>
@@ -1035,11 +1378,10 @@ export default function AdminDashboard({ setView }) {
                         <button
                           onClick={() => handleToggleStockStatus(p)}
                           title="Click to toggle stock status"
-                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition ${
-                            p.inStock !== false
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition ${p.inStock !== false
                               ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
                               : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'
-                          }`}
+                            }`}
                         >
                           {p.inStock !== false ? 'In Stock ✓' : 'Out of Stock ✕'}
                         </button>
@@ -1329,11 +1671,10 @@ export default function AdminDashboard({ setView }) {
                         {c.rate}% OFF
                       </span>
                     </div>
-                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
-                      c.active !== false
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider ${c.active !== false
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
+                      }`}>
                       {c.active !== false ? '🟢 Active' : '🔴 Disabled'}
                     </span>
                   </div>
@@ -1348,11 +1689,10 @@ export default function AdminDashboard({ setView }) {
                     <button
                       type="button"
                       onClick={() => handleToggleCouponStatus(c)}
-                      className={`px-3 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${
-                        c.active !== false
+                      className={`px-3 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${c.active !== false
                           ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
                           : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      }`}
+                        }`}
                     >
                       {c.active !== false ? 'Disable 🚫' : 'Enable 🟢'}
                     </button>
@@ -1440,11 +1780,10 @@ export default function AdminDashboard({ setView }) {
                             <span className="text-xs text-indigo-300 font-mono block truncate">{u.email}</span>
                           </div>
                         </div>
-                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
-                          u.role === 'admin'
+                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${u.role === 'admin'
                             ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                             : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        }`}>
+                          }`}>
                           {u.role}
                         </span>
                       </div>

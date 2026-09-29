@@ -21,38 +21,50 @@ import './Gift.css';
 
 const categories = [
   { id: 'all', name: 'All', icon: <FiGrid className="h-6 w-6 text-indigo-600" /> },
-  { id: 'gift_sets', name: 'Gift Sets', image: '/assets/gift_box.png' },
-  { id: 'mugs', name: 'Mugs', image: '/assets/mug.png' },
-  { id: 'photo_frames', name: 'Photo Frames', image: '/wooden_collage_frame.png' },
-  { id: 'cushions', name: 'Cushions', image: '/assets/cushion.png' },
-  { id: 'chocolates', name: 'Chocolates', image: '/chocolate_gift_box.png' },
-  { id: 'keychains', name: 'Keychains', image: '/spotify_keychain.png' },
-  { id: 'flowers', name: 'Flowers', image: '/bouquet_flowers.png' },
-  { id: 'greeting_cards', name: 'Greeting Cards', image: '/hamper_birthday.png' },
+  { id: 'gift_boxes', name: 'Gift Boxes', image: '/Gift.jpg' },
+  { id: 'photo_frames', name: 'Photo Frames', image: '/Frames.jpg' },
+  { id: 'banners', name: 'Banners', image: '/poster.jpg' },
+  { id: 'birthday', name: 'Birthday', image: '/Banner.jpg' },
+  { id: 'anniversary', name: 'Anniversary', image: '/Annivarsary.jpg' },
+  { id: 'cars', name: 'Cars', image: '/Cars.jpg' },
+  { id: 'personalized', name: 'Personalized', image: '/Personalised.jpg' },
+  { id: 'cushions', name: 'Cushions', image: '/cusion.jpg' },
+  { id: 'combo_gifts', name: 'Combo Gifts', image: '/Combo.jpg' },
   { id: 'lamps', name: 'Lamps', image: '/assets/lamp_portrait.png' },
-  { id: 'personalized', name: 'Personalized Gifts', image: '/wooden_personalized_frame.png' },
+  { id: 'mugs', name: 'Mugs', image: '/assets/mug.png' },
+  { id: 'chocolates', name: 'Chocolates', image: '/chocolate_gift_box.png' },
+  { id: 'flowers', name: 'Flowers', image: '/bouquet_flowers.png' },
+  { id: 'keychains', name: 'Keychains', image: '/spotify_keychain.png' },
 ];
 
 export default function Gift({ 
   setView, 
   onAddToCart, 
   onAddToWishlist, 
+  wishlistItems = [],
   onOpenProduct, 
-  cartCount = 2, 
-  wishlistCount = 0 
+  cartCount = 0, 
+  wishlistCount = 0,
+  initialCategory
 }) {
   // Search state
   const [searchVal, setSearchVal] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
 
   // Filtering states
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
   const [priceFilter, setPriceFilter] = useState('all');
   const [occasionFilter, setOccasionFilter] = useState('all');
   const [personalizationFilter, setPersonalizationFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState('all');
   const [deliveryFilter, setDeliveryFilter] = useState("all");
-const [availabilityFilter, setAvailabilityFilter] = useState("all");
+  const [availabilityFilter, setAvailabilityFilter] = useState("all");
+
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   // Sorting and Layout states
   const [sortOption, setSortOption] = useState('Popular');
@@ -61,11 +73,12 @@ const [availabilityFilter, setAvailabilityFilter] = useState("all");
   // Dropdown open states
   const [activeDropdown, setActiveDropdown] = useState(null); // 'price' | 'occasion' | 'personalization' | 'rating' | 'sort' | 'filterPanel' | null
 
-  // Local Wishlist state to support immediate toggle in grid
-  const [wishlistItems, setWishlistItems] = useState(() => {
-    // mock list
-    return { g1: true, g13: true };
-  });
+  const isProductInWishlist = (product) => {
+    if (!product || !Array.isArray(wishlistItems)) return false;
+    const pid = String(product.id || '');
+    const ptitle = product.title || product.name || '';
+    return wishlistItems.some(w => (pid && String(w.id) === pid) || (ptitle && w.title === ptitle));
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -78,13 +91,11 @@ const [availabilityFilter, setAvailabilityFilter] = useState("all");
     setActiveSearch(e.target.value.trim());
   };
 
-  const toggleWishlist = (e, productId) => {
+  const toggleWishlist = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-    const isAdded = !wishlistItems[productId];
-    setWishlistItems(prev => ({ ...prev, [productId]: isAdded }));
-    if (onAddToWishlist) {
-      onAddToWishlist(isAdded);
+    if (onAddToWishlist && product) {
+      onAddToWishlist(product);
     }
   };
 
@@ -126,14 +137,20 @@ const [availabilityFilter, setAvailabilityFilter] = useState("all");
         id: p.id,
         title: p.title,
         category: p.category || 'Gifts',
-        price: p.currentPrice || p.price,
-        originalPrice: p.originalPrice || Math.round((p.currentPrice || 999) * 1.25),
-        rating: p.rating || 4.8,
-        reviewsCount: p.reviewsCount || 12,
+        price: Number(p.currentPrice || p.price) || 999,
+        originalPrice: Number(p.originalPrice) || Math.round((Number(p.currentPrice || p.price) || 999) * 1.25),
+        rating: Number(p.rating) || 4.8,
+        reviewsCount: Number(p.reviewsCount) || 12,
         image: p.image || '/assets/images/products/led_photo_lamp.jpg',
-        inStock: true
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : ['/assets/images/products/led_photo_lamp.jpg']),
+        inStock: p.inStock !== false,
+        deliveryText: p.deliveryText || 'Get it in 2-3 Days',
+        material: p.material || '',
+        packageIncludes: p.packageIncludes || ''
       }));
-      return [...mapped, ...giftsData];
+      const setIds = new Set(mapped.map(m => String(m.id)));
+      const remainder = giftsData.filter(g => !setIds.has(String(g.id)));
+      return [...mapped, ...remainder];
     }
     return giftsData;
   }, [storeProducts]);
@@ -152,23 +169,50 @@ const [availabilityFilter, setAvailabilityFilter] = useState("all");
       );
     }
 
-    // 2. Category Category filter
-    if (selectedCategory !== 'All') {
+    // 2. Category Filter
+    if (selectedCategory && selectedCategory.toLowerCase() !== 'all') {
+      const target = selectedCategory.toLowerCase().trim();
       result = result.filter(p => {
-        // Map category tabs to product category tags
-        const catMap = {
-          'Gift Sets': 'Gift Sets',
-          'Mugs': 'Mugs',
-          'Photo Frames': 'Photo Frames',
-          'Cushions': 'Cushions',
-          'Chocolates': 'Chocolates',
-          'Keychains': 'Keychains',
-          'Flowers': 'Flowers',
-          'Greeting Cards': 'Greeting Cards',
-          'Lamps': 'Lamps',
-          'Personalized Gifts': 'Personalized Gifts'
-        };
-        return p.category === catMap[selectedCategory];
+        const cat = (p.category || '').toLowerCase();
+        const occ = (p.occasion || '').toLowerCase();
+        const title = (p.title || '').toLowerCase();
+
+        // Exact match
+        if (cat === target) return true;
+
+        // Semantic & Synonym mappings
+        if ((target === 'gift boxes' || target === 'gift sets' || target === 'combo gifts') && 
+            (cat.includes('gift') || cat.includes('box') || cat.includes('combo') || title.includes('box') || title.includes('set') || title.includes('hamper'))) return true;
+
+        if (target === 'photo frames' && (cat.includes('frame') || title.includes('frame'))) return true;
+
+        if ((target === 'personalized' || target === 'personalized gifts') && 
+            (cat.includes('personal') || p.personalization === 'Yes' || title.includes('personalized') || title.includes('custom') || title.includes('photo'))) return true;
+
+        if (target === 'cushions' && (cat.includes('cushion') || title.includes('cushion'))) return true;
+
+        if (target === 'lamps' && (cat.includes('lamp') || title.includes('lamp') || title.includes('led'))) return true;
+
+        if (target === 'mugs' && (cat.includes('mug') || title.includes('mug'))) return true;
+
+        if (target === 'chocolates' && (cat.includes('chocolate') || title.includes('chocolate'))) return true;
+
+        if (target === 'flowers' && (cat.includes('flower') || title.includes('bouquet') || title.includes('flower') || title.includes('rose'))) return true;
+
+        if (target === 'keychains' && (cat.includes('keychain') || title.includes('keychain'))) return true;
+
+        if (target === 'greeting cards' && (cat.includes('card') || title.includes('card') || title.includes('greeting'))) return true;
+
+        if (target === 'birthday' && (occ.includes('birthday') || title.includes('birthday') || cat.includes('birthday') || title.includes('balloon') || title.includes('banner'))) return true;
+
+        if (target === 'anniversary' && (occ.includes('anniversary') || title.includes('anniversary') || occ.includes('valentine') || title.includes('couple') || title.includes('love'))) return true;
+
+        if (target === 'banners' && (cat.includes('banner') || title.includes('banner') || title.includes('poster'))) return true;
+
+        if (target === 'cars' && (cat.includes('car') || title.includes('car') || title.includes('toy'))) return true;
+
+        // General fallback inclusion
+        return cat.includes(target) || occ.includes(target) || title.includes(target);
       });
     }
 
@@ -325,33 +369,12 @@ if (availabilityFilter !== "all") {
           </form>
           <button 
             type="button"
-            onClick={() => toggleDropdown('sort')}
-            className={`flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm shrink-0 relative ${activeDropdown === 'sort' ? 'ring-2 ring-indigo-500/20 border-indigo-500' : ''}`}
+            onClick={() => toggleDropdown('filterPanel')}
+            className={`flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm shrink-0 ${activeDropdown === 'filterPanel' ? 'ring-2 ring-indigo-500/20 border-indigo-500' : ''}`}
+            title="Open Filters"
           >
-            <FiSliders className="h-4 w-4 text-slate-500" />
-            <span className="hidden sm:inline">Sort</span>
-            <FiChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />
-
-            {/* Sort options popup */}
-            {activeDropdown === 'sort' && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] py-1.5 text-left font-normal animate-fade-in">
-                {['Popular', 'Newest', 'Best Selling', 'Highest Rating', 'Price Low to High', 'Price High to Low'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSortOption(opt);
-                      setActiveDropdown(null);
-                    }}
-                    className={`w-full px-4 py-2 text-sm text-left flex items-center justify-between hover:bg-indigo-50 transition-colors ${sortOption === opt ? 'text-indigo-600 font-bold bg-indigo-50/50' : 'text-slate-700'}`}
-                  >
-                    <span>{opt}</span>
-                    {sortOption === opt && <FiCheck className="h-4 w-4" />}
-                  </button>
-                ))}
-              </div>
-            )}
+            <FiSliders className="h-4 w-4 text-indigo-600" />
+            <span className="hidden sm:inline">Filters</span>
           </button>
         </div>
 
@@ -403,46 +426,62 @@ if (availabilityFilter !== "all") {
   {/* Right Side */}
   <div className="flex items-center gap-2">
 
-    {/* Sort */}
-    <div className="relative hidden sm:block">
+    {/* Single Clean Sort Dropdown */}
+    <div className="relative">
       <button
-        onClick={() => toggleDropdown("sort")}
-        className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition"
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleDropdown("sort");
+        }}
+        className={`flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-50 transition shadow-xs ${
+          activeDropdown === "sort" ? "ring-2 ring-indigo-500/20 border-indigo-500" : ""
+        }`}
       >
-        {sortOption}
+        <span className="text-slate-400 font-normal">Sort:</span>
+        <span className="text-indigo-600 font-extrabold">{sortOption}</span>
         <FiChevronDown
-          className={`transition-transform ${
+          className={`h-4 w-4 text-slate-400 transition-transform ${
             activeDropdown === "sort" ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {activeDropdown === "sort" && (
-        <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-2">
-          {[
-            "Popular",
-            "Newest",
-            "Best Selling",
-            "Highest Rating",
-            "Price Low to High",
-            "Price High to Low",
-          ].map((option) => (
-            <button
-              key={option}
-              onClick={() => {
-                setSortOption(option);
-                setActiveDropdown(null);
-              }}
-              className={`w-full px-4 py-2 text-left text-sm hover:bg-indigo-50 ${
-                sortOption === option
-                  ? "text-indigo-600 font-bold bg-indigo-50"
-                  : "text-slate-700"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setActiveDropdown(null)}
+          />
+          <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 animate-fade-in text-left">
+            {[
+              "Popular",
+              "Newest",
+              "Best Selling",
+              "Highest Rating",
+              "Price Low to High",
+              "Price High to Low",
+            ].map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSortOption(option);
+                  setActiveDropdown(null);
+                }}
+                className={`w-full px-4 py-2.5 text-xs sm:text-sm flex items-center justify-between transition-colors ${
+                  sortOption === option
+                    ? "text-indigo-600 font-extrabold bg-indigo-50"
+                    : "text-slate-700 hover:bg-slate-50 font-medium"
+                }`}
+              >
+                <span>{option}</span>
+                {sortOption === option && <FiCheck className="h-4 w-4 text-indigo-600" />}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
 
@@ -698,7 +737,7 @@ animate-fade-in
           /* GRID VIEW */
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 2xl:grid-cols-6 gap-4 lg:gap-5">
             {filteredProducts.map((p) => {
-              const isLiked = !!wishlistItems[p.id];
+              const isLiked = isProductInWishlist(p);
               return (
                 <div
                   key={p.id}
@@ -731,7 +770,7 @@ animate-fade-in
 
                     {/* Right Heart Toggle */}
                     <button
-                      onClick={(e) => toggleWishlist(e, p.id)}
+                      onClick={(e) => toggleWishlist(e, p)}
                       className="absolute top-2.5 right-2.5 h-8 w-8 bg-white/95 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 group-hover:scale-102"
                       aria-label="Add to Wishlist"
                     >
@@ -788,7 +827,7 @@ animate-fade-in
           /* LIST VIEW */
           <div className="flex flex-col gap-3 max-w-4xl mx-auto">
             {filteredProducts.map((p) => {
-              const isLiked = !!wishlistItems[p.id];
+              const isLiked = isProductInWishlist(p);
               return (
                 <div
                   key={p.id}
@@ -829,7 +868,7 @@ animate-fade-in
 
                         {/* Heart toggle list view */}
                         <button
-                          onClick={(e) => toggleWishlist(e, p.id)}
+                          onClick={(e) => toggleWishlist(e, p)}
                           className="h-8 w-8 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-all active:scale-90"
                           aria-label="Add to Wishlist"
                         >
@@ -904,7 +943,10 @@ animate-fade-in
           </div>
           <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-end">
             <button
-              onClick={() => setView('categories')} // Navigate to categories search
+              onClick={() => {
+                setSelectedCategory('Personalized');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="w-full sm:w-auto px-6 py-3 bg-white text-indigo-700 font-extrabold text-xs rounded-xl shadow-md border border-indigo-100 hover:bg-slate-50 hover:shadow-lg active:scale-95 transition-all text-center whitespace-nowrap"
             >
               Customize Now

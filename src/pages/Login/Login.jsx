@@ -1,6 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import giftsShowcase from "../../assets/gifts_showcase.png";
 import { useAuth } from "../../context/AuthContext";
+import { auth, RecaptchaVerifier, signInWithPhoneNumber, db } from "../../firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const DEFAULT_USERS = [
   {
@@ -168,12 +170,41 @@ export default function Login({ setView }) {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(true);
 
-  // OTP login state
+  // Firebase Phone Auth state
+  const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState(Array(6).fill(""));
   const [showOtp, setShowOtp] = useState(false);
-  const [otpDisplay, setOtpDisplay] = useState("+91 XXXXXXXX");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
   const otpRefs = useRef([]);
+  const confirmationResultRef = useRef(null);
+
+  // 30s Resend OTP Timer Effect
+  useEffect(() => {
+    let timer;
+    if (showOtp && resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (resendTimer === 0) {
+      setCanResend(true);
+    }
+    return () => clearInterval(timer);
+  }, [showOtp, resendTimer]);
+
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+    };
+  }, []);
 
   // UI feedback
   const [errorMessage, setErrorMessage] = useState("");
@@ -309,10 +340,36 @@ export default function Login({ setView }) {
     }
   };
 
-  // OTP Login Submit
-  const handleOtpLoginSubmit = (e) => {
-    e.preventDefault();
-    const cleaned = mobile.trim();
+  const setupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+      window.recaptchaVerifier = null;
+    }
+
+    const container = document.getElementById('recaptcha-container');
+    if (container) {
+      container.innerHTML = '';
+    }
+
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {
+        console.log("reCAPTCHA verified");
+      },
+      'expired-callback': () => {
+        setErrorMessage("reCAPTCHA expired. Please request OTP again.");
+      }
+    });
+
+    return window.recaptchaVerifier;
+  };
+
+  // Firebase Phone Auth: Send OTP
+  const handleSendOtpSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const cleaned = mobile.trim().replace(/\D/g, "");
 
     if (!/^\d{10}$/.test(cleaned)) {
       setErrorMessage("Please enter a valid 10-digit mobile number.");
@@ -320,10 +377,41 @@ export default function Login({ setView }) {
     }
 
     setErrorMessage("");
-    setOtpDisplay(`+91 ${cleaned}`);
-    setOtp(Array(6).fill(""));
-    setShowOtp(true);
-    setTimeout(() => otpRefs.current[0]?.focus(), 50);
+    setSuccessMessage("");
+    setIsSendingOtp(true);
+
+    const fullPhoneNumber = `${countryCode}${cleaned}`;
+
+    try {
+      const appVerifier = setupRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
+      confirmationResultRef.current = confirmationResult;
+
+      setSuccessMessage(`OTP sent to ${fullPhoneNumber}`);
+      setShowOtp(true);
+      setResendTimer(30);
+      setCanResend(false);
+      setOtp(Array(6).fill(""));
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    } catch (err) {
+      console.error("Firebase Phone Auth error:", err);
+      if (window.recaptchaVerifier) {
+        try { window.recaptchaVerifier.clear(); } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+
+      if (err.code === 'auth/invalid-phone-number') {
+        setErrorMessage("Invalid phone number. Please check the number.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setErrorMessage("Too many requests. Please try again later.");
+      } else if (err.code === 'auth/quota-exceeded') {
+        setErrorMessage("SMS quota exceeded. Please try again later.");
+      } else {
+        setErrorMessage(err.message || "Failed to send OTP via Firebase Authentication.");
+      }
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -360,31 +448,83 @@ export default function Login({ setView }) {
     }
   };
 
-  const handleOtpVerify = () => {
-    const enteredOtp = otp.join("");
-    if (enteredOtp.length !== 6 || otp.some((digit) => digit === "")) {
-      alert("Please enter the full 6-digit OTP.");
+  // Firebase Phone Auth: Verify OTP
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    const enteredOtp = otp.join("").trim();
+
+    if (enteredOtp.length !== 6 || otp.some((digit) => !digit)) {
+      setErrorMessage("Please enter the 6-digit OTP.");
       return;
     }
 
-    alert(`OTP verified successfully!`);
-    setShowOtp(false);
-    setOtp(Array(6).fill(""));
-    setMobile("");
-    if (typeof setView === "function") {
-      setView("home1");
+    if (!confirmationResultRef.current) {
+      setErrorMessage("OTP session expired. Please request a new OTP.");
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsVerifyingOtp(true);
+
+    const cleanedPhone = mobile.trim().replace(/\D/g, "");
+
+    try {
+      const result = await confirmationResultRef.current.confirm(enteredOtp);
+      const firebaseUser = result.user;
+
+      const userProfile = {
+        uid: firebaseUser.uid,
+        name: `Customer (${cleanedPhone.slice(-4)})`,
+        phone: cleanedPhone,
+        email: firebaseUser.email || `user_${cleanedPhone}@inexgifts.com`,
+        role: 'customer'
+      };
+
+      try {
+        await setDoc(doc(db, 'users', firebaseUser.uid), userProfile, { merge: true });
+      } catch (e) {}
+
+      localStorage.setItem('inex_current_user', JSON.stringify(userProfile));
+
+      setSuccessMessage("OTP verified! Logging you in...");
+      setShowOtp(false);
+
+      setTimeout(() => {
+        if (typeof setView === "function") {
+          setView("home1");
+        }
+      }, 600);
+    } catch (err) {
+      console.error("Firebase OTP verification error:", err);
+      if (err.code === 'auth/invalid-verification-code') {
+        setErrorMessage("Invalid OTP. Please try again.");
+      } else if (err.code === 'auth/code-expired') {
+        setErrorMessage("Expired OTP. Please request a new OTP.");
+      } else {
+        setErrorMessage("Invalid OTP. Please try again.");
+      }
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
 
-  const closeOtp = () => {
+  const handleResendOtp = async () => {
+    if (!canResend) return;
+    await handleSendOtpSubmit(null);
+  };
+
+  const handleChangePhoneNumber = () => {
     setShowOtp(false);
+    setErrorMessage("");
+    setSuccessMessage("");
     setOtp(Array(6).fill(""));
   };
 
   return (
     <div className="app min-h-screen bg-[#f6f2ff] text-[#1f1b33] flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-[1440px] grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        
+
         {/* Left Side: Branding & Features Showcase */}
         <aside className="hidden lg:flex relative flex-col justify-between overflow-hidden rounded-[40px] border border-[#ebe5ff] bg-[linear-gradient(160deg,_#f8f2ff_0%,_#fff9fe_100%)] p-8 shadow-[0_30px_70px_rgba(79,59,246,0.09)]">
           <div>
@@ -468,8 +608,8 @@ export default function Login({ setView }) {
                 {activeTab === "login" ? "Welcome Back! 👋" : "Create an Account 🎁"}
               </h2>
               <p className="mt-2 text-[0.98rem] text-[#6f6a85]">
-                {activeTab === "login" 
-                  ? "Log in using your email & password to explore INEX Gifts" 
+                {activeTab === "login"
+                  ? "Log in using your email & password to explore INEX Gifts"
                   : "Register with your details to unlock exclusive personalized gift offers"}
               </p>
             </div>
@@ -478,22 +618,20 @@ export default function Login({ setView }) {
             <div className="mt-6 flex rounded-full bg-[#f5f1ff] p-1.5">
               <button
                 type="button"
-                className={`flex flex-1 items-center justify-center rounded-full px-4 py-3 text-[0.95rem] font-bold transition ${
-                  activeTab === "login"
+                className={`flex flex-1 items-center justify-center rounded-full px-4 py-3 text-[0.95rem] font-bold transition ${activeTab === "login"
                     ? "bg-white text-[#6c53ff] shadow-[0_12px_30px_rgba(124,99,255,0.15)]"
                     : "text-[#8f8ba8] hover:text-[#5f5980]"
-                }`}
+                  }`}
                 onClick={() => switchTab("login")}
               >
                 Login
               </button>
               <button
                 type="button"
-                className={`flex flex-1 items-center justify-center rounded-full px-4 py-3 text-[0.95rem] font-bold transition ${
-                  activeTab === "register"
+                className={`flex flex-1 items-center justify-center rounded-full px-4 py-3 text-[0.95rem] font-bold transition ${activeTab === "register"
                     ? "bg-white text-[#6c53ff] shadow-[0_12px_30px_rgba(124,99,255,0.15)]"
                     : "text-[#8f8ba8] hover:text-[#5f5980]"
-                }`}
+                  }`}
                 onClick={() => switchTab("register")}
               >
                 Register
@@ -619,16 +757,31 @@ export default function Login({ setView }) {
                     </button>
                   </form>
                 ) : (
-                  /* Mobile OTP Mode */
-                  <form className="space-y-4" onSubmit={handleOtpLoginSubmit}>
+                  /* Mobile OTP Mode (Screen 1) */
+                  <form className="space-y-4" onSubmit={handleSendOtpSubmit}>
+                    <div id="recaptcha-container"></div>
                     <div className="rounded-[28px] border border-[#ece6ff] bg-[#fbf8ff] p-4 shadow-sm">
-                      <label htmlFor="mobile" className="block text-[0.92rem] font-semibold text-[#5d5780]">Mobile Number</label>
-                      <div className="mt-3 flex items-center gap-3 rounded-[22px] border border-[#e9e4ff] bg-white px-4 py-3 shadow-sm">
-                        <span className="text-[#7f78a4] font-semibold">+91</span>
+                      <label htmlFor="mobile" className="block text-[0.92rem] font-bold text-[#352f54]">
+                        Login with Phone Number
+                      </label>
+                      <p className="text-xs text-[#736c99] mb-3">Enter your phone number to receive an OTP</p>
+                      
+                      <div className="flex items-center gap-2 rounded-[22px] border border-[#e9e4ff] bg-white px-3 py-2.5 shadow-sm focus-within:border-[#6c53ff]">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="bg-transparent text-xs font-extrabold text-[#6c53ff] outline-none cursor-pointer border-r border-slate-200 pr-2"
+                        >
+                          <option value="+91">🇮🇳 +91 (India)</option>
+                          <option value="+1">🇺🇸 +1 (USA)</option>
+                          <option value="+44">🇬🇧 +44 (UK)</option>
+                          <option value="+971">🇦🇪 +971 (UAE)</option>
+                        </select>
                         <input
                           id="mobile"
                           type="tel"
-                          className="w-full border-none bg-transparent text-[0.95rem] text-[#25223b] outline-none placeholder:text-[#b7add6]"
+                          required
+                          className="w-full border-none bg-transparent text-[0.95rem] font-bold text-[#25223b] outline-none placeholder:text-[#b7add6] tracking-wider"
                           placeholder="Enter 10-digit mobile number"
                           maxLength="10"
                           autoComplete="tel"
@@ -636,14 +789,24 @@ export default function Login({ setView }) {
                           onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
                         />
                       </div>
-                      <p className="mt-2 text-[0.82rem] text-[#7c76a5]">We will send you a 6-digit OTP code.</p>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full rounded-[26px] bg-gradient-to-r from-[#7d67ff] to-[#5b45ff] px-6 py-4 text-[0.95rem] font-bold text-white shadow-[0_18px_40px_rgba(124,103,255,0.28)] transition hover:opacity-95"
+                      disabled={isSendingOtp}
+                      className="w-full rounded-[26px] bg-gradient-to-r from-[#7d67ff] to-[#5b45ff] px-6 py-4 text-[0.95rem] font-extrabold text-white shadow-[0_18px_40px_rgba(124,103,255,0.28)] transition hover:opacity-95 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
                     >
-                      Send Login OTP
+                      {isSendingOtp ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                          </svg>
+                          <span>Sending OTP...</span>
+                        </>
+                      ) : (
+                        "Send OTP 📩"
+                      )}
                     </button>
                   </form>
                 )}
@@ -905,21 +1068,32 @@ export default function Login({ setView }) {
             </div>
           </div>
 
-          {/* OTP Modal (if mobile OTP mode is used) */}
+          {/* Screen 2: OTP Verification Modal */}
           {showOtp && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(15,23,42,0.55)] p-4 rounded-[40px]" onClick={(e) => e.target === e.currentTarget && closeOtp()}>
-              <div className="w-full max-w-[360px] rounded-[28px] bg-white p-6 text-center shadow-2xl">
-                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f2ff] text-[#4f3bf6]">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 rounded-[40px]">
+              <div className="w-full max-w-[380px] rounded-[32px] bg-white p-6 text-center shadow-2xl space-y-4 border border-[#e8e2ff]">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f3eeff] text-[#6c53ff] shadow-inner">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                     <line x1="12" y1="18" x2="12.01" y2="18" />
                   </svg>
                 </div>
-                <h3 className="text-[1.3rem] font-bold text-[#1f1a3a]">Verify OTP Code</h3>
-                <p className="mt-1.5 text-[0.9rem] text-[#718096]">
-                  Sent 6-digit code to <strong className="text-[#1f1a3a]">{otpDisplay}</strong>
-                </p>
-                <div className="mt-4 grid grid-cols-6 gap-2">
+
+                <div>
+                  <h3 className="text-xl font-extrabold text-[#1f1a3a]">Verify OTP</h3>
+                  <p className="mt-1 text-xs text-[#6b648c]">
+                    Enter the 6-digit OTP sent to <strong className="text-[#6c53ff] font-bold">{countryCode} {mobile ? `${mobile.slice(0, 5)} ${mobile.slice(5)}` : 'XXXXXXXXXX'}</strong>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleChangePhoneNumber}
+                    className="mt-1 text-[11px] font-extrabold text-[#6c53ff] hover:underline inline-flex items-center gap-1"
+                  >
+                    ✏️ Change / Edit Number
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-6 gap-2 pt-1">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -928,7 +1102,7 @@ export default function Login({ setView }) {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength="1"
-                      className="h-11 w-full rounded-[16px] border border-[#e5e1f7] bg-[#faf7ff] text-center text-[1.1rem] font-bold text-[#1f1a3a] outline-none focus:border-[#7c63ff] focus:ring-2 focus:ring-[#ede8ff]"
+                      className="h-12 w-full rounded-[16px] border border-[#e2dcff] bg-[#faf8ff] text-center text-lg font-black text-[#1f1a3a] outline-none focus:border-[#6c53ff] focus:ring-2 focus:ring-[#ede7ff] transition"
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
@@ -936,13 +1110,43 @@ export default function Login({ setView }) {
                     />
                   ))}
                 </div>
-                <div className="mt-5 flex gap-2 justify-center">
-                  <button type="button" className="rounded-[20px] border border-[#e7e3ff] px-4 py-2 text-[0.88rem] font-semibold text-[#5f5a7f]" onClick={closeOtp}>
-                    Cancel
+
+                <div className="pt-2 space-y-3">
+                  <button
+                    type="button"
+                    disabled={isVerifyingOtp}
+                    onClick={handleVerifyOtp}
+                    className="w-full rounded-[24px] bg-[#6c53ff] hover:bg-[#583eff] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-indigo-500/25 transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isVerifyingOtp ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      "Verify & Login ✓"
+                    )}
                   </button>
-                  <button type="button" className="rounded-[20px] bg-[#6c53ff] px-5 py-2 text-[0.88rem] font-semibold text-white" onClick={handleOtpVerify}>
-                    Verify & Login
-                  </button>
+
+                  <div className="text-center pt-1">
+                    <p className="text-xs text-[#77709c]">Didn't receive the OTP?</p>
+                    {canResend ? (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        className="mt-1 text-xs font-extrabold text-[#6c53ff] hover:underline cursor-pointer"
+                      >
+                        🔄 Resend OTP Code
+                      </button>
+                    ) : (
+                      <span className="mt-1 text-xs font-semibold text-[#8f88b8] block">
+                        Resend OTP in <strong className="text-[#6c53ff] font-extrabold">{resendTimer}s</strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

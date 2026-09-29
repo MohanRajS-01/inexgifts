@@ -6,7 +6,6 @@ import SplashScreen from "./pages/SplashScreen/SplashScreen";
 import Login from "./pages/Login/Login";
 import Search from "./pages/Search/Search";
 import ProductDetails2 from "./pages/ProductDetails/ProductDetails2";
-import Categories from "./pages/Categories/Categories";
 import MyOrder from "./pages/Orders/MyOrder";
 import CartPage from "./pages/Cart/CartPage";
 import Wishlist from "./pages/Wishlist/Wishlist";
@@ -14,45 +13,12 @@ import Profile from "./pages/Profile/Profile";
 import Gift from "./pages/Gift/Gift";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { initFirestoreDatabase } from "./services/initFirestore";
-
-const DEFAULT_CART = [
-  {
-    id: 'led_lamp',
-    title: 'LED Photo Lamp',
-    subtitle: 'Personalized with 1 photo',
-    image: '/assets/images/products/led_photo_lamp.jpg',
-    originalPrice: 1299,
-    currentPrice: 999,
-    discount: 23,
-    quantity: 1,
-    optionType: 'Size',
-    selectedOption: 'Medium',
-    options: ['Medium', 'Small', 'Large']
-  },
-  {
-    id: 'photo_cushion',
-    title: 'Photo Cushion',
-    subtitle: 'Personalized with 6 photos',
-    image: '/assets/cushion.png',
-    originalPrice: 599,
-    currentPrice: 499,
-    discount: 17,
-    quantity: 1,
-    optionType: 'Size',
-    selectedOption: '16 x 16 inch',
-    options: ['16 x 16 inch', '12 x 12 inch', '18 x 18 inch']
-  }
-];
-
-const DEFAULT_WISHLIST = [
-  { id: 'collage_frame', title: 'Wooden Collage Photo Frame', price: 749, image: '/assets/images/products/wooden_collage_frame.jpg' },
-  { id: 'customized_mug', title: 'Customized Mug', price: 299, image: '/assets/images/products/customized_mug.jpg' },
-  { id: 'keychain', title: 'Personalized Keychain', price: 199, image: '/assets/images/products/photo_keychain.jpg' }
-];
+import { cartService } from "./services/cartService";
 
 function AppContent() {
+  const { currentUser } = useAuth() || {};
   const [view, setView] = useState('splash');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -60,38 +26,53 @@ function AppContent() {
   const [previousView, setPreviousView] = useState('home1');
   const [selectedCategory, setSelectedCategory] = useState('Gift Boxes');
 
-  // LocalStorage Backed Cart & Wishlist State
+  // Customer Cart & Wishlist: Real, clean state backed by localStorage & Firestore
   const [cartItems, setCartItems] = useState(() => {
     try {
       const saved = localStorage.getItem('inex_cart_items');
-      return saved ? JSON.parse(saved) : DEFAULT_CART;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return DEFAULT_CART;
+      return [];
     }
   });
 
   const [wishlistItems, setWishlistItems] = useState(() => {
     try {
       const saved = localStorage.getItem('inex_wishlist_items');
-      return saved ? JSON.parse(saved) : DEFAULT_WISHLIST;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return DEFAULT_WISHLIST;
+      return [];
     }
   });
 
-  // Auto-seed initial Firestore Database collections (users, banners, products, orders)
+  // Auto-seed initial Firestore Database collections (users, banners, products) only if empty
   useEffect(() => {
     initFirestoreDatabase();
   }, []);
 
-  // Save to localStorage on change
+  // Sync cart from Firestore backend when user logs in
+  useEffect(() => {
+    if (currentUser?.email) {
+      cartService.getCart(currentUser.email).then((remoteCart) => {
+        if (Array.isArray(remoteCart) && remoteCart.length > 0) {
+          setCartItems(remoteCart);
+        }
+      });
+    }
+  }, [currentUser?.email]);
+
+  // Save to localStorage & sync with Firestore backend
   useEffect(() => {
     try {
       localStorage.setItem('inex_cart_items', JSON.stringify(cartItems));
     } catch (e) {
       console.error('Error saving cart to localStorage', e);
     }
-  }, [cartItems]);
+
+    if (currentUser?.email) {
+      cartService.saveCart(currentUser.email, cartItems);
+    }
+  }, [cartItems, currentUser?.email]);
 
   useEffect(() => {
     try {
@@ -150,30 +131,32 @@ function AppContent() {
   };
 
   // Toggle Wishlist Product
-  const handleToggleWishlist = (productOrIsAdded) => {
-    if (typeof productOrIsAdded === 'boolean') {
-      return;
-    }
+  const handleToggleWishlist = (product) => {
+    if (!product || typeof product !== 'object') return;
 
-    if (!productOrIsAdded) return;
-
-    const product = productOrIsAdded;
-    const itemId = String(product.id || product.title || Date.now());
-    const itemTitle = product.title || product.name || 'Custom Product';
-    const itemPrice = typeof product.price === 'number' ? product.price : parseFloat(String(product.price || '999').replace(/[^0-9.]/g, '')) || 999;
-    const itemImage = product.image || '/assets/images/products/wooden_collage_frame.jpg';
+    const itemId = String(product.id || '');
+    const itemTitle = product.title || product.name || '';
+    const rawPrice = product.currentPrice ?? product.price ?? 999;
+    const itemPrice = typeof rawPrice === 'number'
+      ? rawPrice
+      : parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 999;
+    const origPrice = product.originalPrice ? (typeof product.originalPrice === 'number' ? product.originalPrice : parseFloat(String(product.originalPrice).replace(/[^0-9.]/g, ''))) : Math.round(itemPrice * 1.25);
+    const itemImage = product.image || (Array.isArray(product.images) && product.images[0]) || '/assets/images/products/led_photo_lamp.jpg';
 
     setWishlistItems((prevItems) => {
-      const exists = prevItems.some(i => i.id === itemId || i.title === itemTitle);
+      const exists = prevItems.some(i => (itemId && String(i.id) === itemId) || (itemTitle && i.title === itemTitle));
       if (exists) {
-        return prevItems.filter(i => i.id !== itemId && i.title !== itemTitle);
+        return prevItems.filter(i => !((itemId && String(i.id) === itemId) || (itemTitle && i.title === itemTitle)));
       } else {
         return [...prevItems, {
-          id: itemId,
-          title: itemTitle,
+          id: itemId || String(Date.now()),
+          title: itemTitle || 'Custom Product',
           price: itemPrice,
+          currentPrice: itemPrice,
+          originalPrice: origPrice,
           image: itemImage,
-          subtitle: product.subtitle || 'Saved Product'
+          images: Array.isArray(product.images) && product.images.length > 0 ? product.images : [itemImage],
+          subtitle: product.subtitle || product.category || 'Saved Gift'
         }];
       }
     });
@@ -222,31 +205,33 @@ function AppContent() {
             showToast={() => { }}
             qty={qty}
             setQty={setQty}
-            onAddToCart={(addQty = 1) => { handleAddToCart(selectedProduct, addQty); setView('cart'); }}
-            onToggleWishlist={() => handleToggleWishlist(selectedProduct)}
+            onAddToCart={(itemOrQty = 1) => {
+              if (typeof itemOrQty === 'object' && itemOrQty !== null) {
+                handleAddToCart(itemOrQty, itemOrQty.quantity || 1);
+              } else {
+                handleAddToCart(selectedProduct, itemOrQty);
+              }
+              setView('cart');
+            }}
+            onToggleWishlist={handleToggleWishlist}
+            wishlistItems={wishlistItems}
             onBack={() => setView(previousView || 'home1')}
             onOpenCart={() => setView('cart')}
             cartCount={cartCount}
           />
         ) : null;
       case 'categories':
-        return (
-          <Categories
-            setView={setView}
-            onSearch={handleSearch}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-          />
-        );
       case 'gift':
         return (
           <Gift
             setView={setView}
             onAddToCart={handleAddToCart}
             onAddToWishlist={handleToggleWishlist}
+            wishlistItems={wishlistItems}
             onOpenProduct={openProduct}
             cartCount={cartCount}
             wishlistCount={wishlistCount}
+            initialCategory={selectedCategory}
           />
         );
       case 'cart':
@@ -261,7 +246,16 @@ function AppContent() {
           />
         );
       case 'wishlist':
-        return <Wishlist wishlistItems={wishlistItems} setWishlistItems={setWishlistItems} cartItems={cartItems} setCartItems={setCartItems} onAddToCart={handleAddToCart} setView={setView} />;
+        return (
+          <Wishlist
+            wishlistItems={wishlistItems}
+            setWishlistItems={setWishlistItems}
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+            onAddToCart={handleAddToCart}
+            setView={setView}
+          />
+        );
       case 'orders':
         return <MyOrder setView={setView} />;
       case 'profile':
@@ -272,6 +266,7 @@ function AppContent() {
           <Home
             onAddToCart={handleAddToCart}
             onAddToWishlist={handleToggleWishlist}
+            wishlistItems={wishlistItems}
             onSearch={handleSearch}
             onOpenProduct={openProduct}
             setView={setView}
@@ -301,7 +296,7 @@ function AppContent() {
       <div className={showNav ? "pb-24 md:pb-0" : ""}>
         {renderView()}
       </div>
-      {showNav && <MobileBottomNav setView={setView} currentView={view} />}
+      {showNav && <MobileBottomNav setView={setView} currentView={view} wishlistCount={wishlistCount} />}
     </div>
   );
 }
